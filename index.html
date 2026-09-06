@@ -1,0 +1,456 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cutting a Production LLM Pipeline's Cost by 60%</title>
+<meta name="description" content="Case study: measuring, then removing structural waste from a real-estate tech company's LLM automations. Teodor Velický, Applied AI Engineer.">
+<meta property="og:title" content="Cutting a Production LLM Pipeline's Cost by 60%">
+<meta property="og:description" content="Case study: measuring, then removing structural waste from a real-estate tech company's LLM automations.">
+<meta property="og:type" content="article">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<style>
+:root{
+  --paper:#F4F6F3;
+  --surface:#FFFFFF;
+  --ink:#111614;
+  --ink-soft:#3A443F;
+  --muted:#5C6862;
+  --rule:#D9DED8;
+  --rule-soft:#E7EBE5;
+  --accent:#0E6A57;
+  --accent-soft:#DCEBE5;
+  --flag:#9E4529;
+  --flag-soft:#F2E2DC;
+  --shadow:0 1px 2px rgba(17,22,20,.05);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --paper:#0D110F;
+    --surface:#141917;
+    --ink:#E6EAE5;
+    --ink-soft:#C2CAC5;
+    --muted:#8A968F;
+    --rule:#242C29;
+    --rule-soft:#1B211E;
+    --accent:#57C4A7;
+    --accent-soft:#132621;
+    --flag:#D6866A;
+    --flag-soft:#2A1B15;
+    --shadow:none;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0D110F;
+  --surface:#141917;
+  --ink:#E6EAE5;
+  --ink-soft:#C2CAC5;
+  --muted:#8A968F;
+  --rule:#242C29;
+  --rule-soft:#1B211E;
+  --accent:#57C4A7;
+  --accent-soft:#132621;
+  --flag:#D6866A;
+  --flag-soft:#2A1B15;
+  --shadow:none;
+}
+
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;
+  background:var(--paper);
+  color:var(--ink);
+  font-family:"Source Serif 4",Georgia,"Times New Roman",serif;
+  font-size:18px;
+  line-height:1.65;
+  font-optical-sizing:auto;
+}
+.wrap{
+  max-width:44rem;
+  margin:0 auto;
+  padding:3.5rem 1.5rem 5rem;
+}
+@media (min-width:60rem){
+  .wrap{padding:5rem 1.5rem 6rem}
+}
+
+/* ---------- header ---------- */
+.eyebrow{
+  font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:.72rem;
+  font-weight:500;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+  color:var(--accent);
+  margin:0 0 1.25rem;
+}
+h1{
+  font-family:Archivo,"Helvetica Neue",Arial,sans-serif;
+  font-weight:700;
+  font-size:clamp(2rem,5.5vw,3rem);
+  line-height:1.06;
+  letter-spacing:-.025em;
+  text-wrap:balance;
+  margin:0 0 1.5rem;
+}
+h1 .pct{
+  color:var(--accent);
+  font-variant-numeric:tabular-nums;
+}
+.standfirst{
+  font-size:1.15rem;
+  color:var(--ink-soft);
+  margin:0 0 2.5rem;
+  max-width:34rem;
+}
+
+.facts{
+  display:grid;
+  gap:0;
+  border-top:1px solid var(--rule);
+  border-bottom:1px solid var(--rule);
+  margin:0 0 3.5rem;
+}
+.fact{
+  display:grid;
+  grid-template-columns:6.5rem 1fr;
+  gap:1rem;
+  padding:.7rem 0;
+  align-items:baseline;
+}
+.fact + .fact{border-top:1px solid var(--rule-soft)}
+.fact dt{
+  font-family:"JetBrains Mono",ui-monospace,monospace;
+  font-size:.68rem;
+  font-weight:500;
+  letter-spacing:.1em;
+  text-transform:uppercase;
+  color:var(--muted);
+}
+.fact dd{
+  margin:0;
+  font-size:.98rem;
+  color:var(--ink-soft);
+}
+
+/* ---------- headline metric ---------- */
+.metric{
+  background:var(--surface);
+  border:1px solid var(--rule);
+  border-left:3px solid var(--accent);
+  padding:1.5rem 1.5rem 1.4rem;
+  margin:0 0 3.5rem;
+  box-shadow:var(--shadow);
+}
+.metric-figure{
+  font-family:Archivo,sans-serif;
+  font-weight:700;
+  font-size:clamp(2.75rem,9vw,3.75rem);
+  line-height:.95;
+  letter-spacing:-.03em;
+  color:var(--accent);
+  font-variant-numeric:tabular-nums;
+  display:block;
+}
+.metric-label{
+  font-family:"JetBrains Mono",ui-monospace,monospace;
+  font-size:.75rem;
+  letter-spacing:.06em;
+  color:var(--muted);
+  margin:.7rem 0 0;
+  line-height:1.5;
+}
+.metric-label strong{color:var(--ink-soft);font-weight:500}
+
+/* ---------- sections ---------- */
+h2{
+  font-family:Archivo,sans-serif;
+  font-weight:600;
+  font-size:1.35rem;
+  letter-spacing:-.01em;
+  line-height:1.25;
+  margin:3.25rem 0 1rem;
+  text-wrap:balance;
+}
+h2:first-of-type{margin-top:0}
+p{margin:0 0 1.15rem}
+p:last-child{margin-bottom:0}
+code{
+  font-family:"JetBrains Mono",ui-monospace,monospace;
+  font-size:.85em;
+  background:var(--accent-soft);
+  color:var(--ink);
+  padding:.1em .35em;
+  border-radius:3px;
+}
+
+.steps{
+  list-style:none;
+  margin:0;
+  padding:0;
+  display:flex;
+  flex-direction:column;
+  gap:2.25rem;
+}
+.step{
+  display:grid;
+  grid-template-columns:2rem 1fr;
+  gap:1.1rem;
+}
+@media (max-width:34rem){
+  .step{grid-template-columns:1.6rem 1fr;gap:.85rem}
+}
+.step-num{
+  font-family:"JetBrains Mono",ui-monospace,monospace;
+  font-size:.8rem;
+  font-weight:700;
+  color:var(--accent);
+  padding-top:.42rem;
+  font-variant-numeric:tabular-nums;
+}
+.step h3{
+  font-family:Archivo,sans-serif;
+  font-weight:600;
+  font-size:1.08rem;
+  letter-spacing:-.005em;
+  margin:0 0 .5rem;
+  line-height:1.35;
+}
+.step p{font-size:1rem;color:var(--ink-soft)}
+
+.step--flag .step-num{color:var(--flag)}
+.step--flag .step-body{
+  border-left:2px solid var(--flag);
+  background:var(--flag-soft);
+  padding:.9rem 1.1rem;
+  margin-left:-1.1rem;
+}
+.step--flag h3{margin-top:0}
+
+/* ---------- diagram ---------- */
+figure{
+  margin:1.5rem 0 0;
+  padding:1.15rem 1.15rem .9rem;
+  background:var(--surface);
+  border:1px solid var(--rule);
+  overflow-x:auto;
+}
+figure svg{display:block;width:100%;height:auto;min-width:19rem}
+figcaption{
+  font-family:"JetBrains Mono",ui-monospace,monospace;
+  font-size:.68rem;
+  letter-spacing:.05em;
+  color:var(--muted);
+  margin-top:.85rem;
+  line-height:1.55;
+}
+
+/* ---------- outcomes ---------- */
+.outcomes{
+  list-style:none;
+  margin:0;
+  padding:0;
+  display:flex;
+  flex-direction:column;
+  border-top:1px solid var(--rule);
+}
+.outcomes li{
+  border-bottom:1px solid var(--rule-soft);
+  padding:.9rem 0 .9rem 1.5rem;
+  position:relative;
+  font-size:1rem;
+  color:var(--ink-soft);
+}
+.outcomes li::before{
+  content:"";
+  position:absolute;
+  left:0;
+  top:1.45rem;
+  width:.5rem;
+  height:1px;
+  background:var(--accent);
+}
+
+/* ---------- closing ---------- */
+.closing{
+  margin-top:3.5rem;
+  padding-top:2.25rem;
+  border-top:2px solid var(--ink);
+}
+.closing h2{margin-top:0}
+
+.sig{
+  margin-top:3rem;
+  padding-top:1.5rem;
+  border-top:1px solid var(--rule);
+  display:flex;
+  flex-wrap:wrap;
+  gap:.35rem 1.25rem;
+  align-items:baseline;
+  font-family:"JetBrains Mono",ui-monospace,monospace;
+  font-size:.78rem;
+  letter-spacing:.02em;
+  color:var(--muted);
+}
+.sig .name{color:var(--ink);font-weight:700}
+.sig a{color:var(--accent);text-decoration:none;border-bottom:1px solid var(--accent-soft)}
+.sig a:hover,.sig a:focus-visible{border-bottom-color:var(--accent)}
+a:focus-visible,:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+
+@media (prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important}
+}
+</style>
+</head>
+<body>
+<main class="wrap">
+
+  <p class="eyebrow">Case study · LLM cost engineering</p>
+
+  <h1>How I cut a production LLM pipeline's cost by about <span class="pct">60%</span></h1>
+
+  <p class="standfirst">The team had shipped AI features quickly and they worked. Nobody could say what each one cost, which model it ran on, or whether the bill was growing because of real usage or because of waste.</p>
+
+  <dl class="facts">
+    <div class="fact"><dt>Client</dt><dd>A real-estate technology company running several LLM automations in production. Name under NDA; references on request.</dd></div>
+    <div class="fact"><dt>Role</dt><dd>First dedicated AI consultant, part time, 2026.</dd></div>
+    <div class="fact"><dt>Stack</dt><dd>PHP monolith with cron jobs, Anthropic API, some TypeScript and Python tooling.</dd></div>
+  </dl>
+
+  <div class="metric">
+    <span class="metric-figure">~60%</span>
+    <p class="metric-label">lower cost on the highest-volume pipeline — an email classifier running on <strong>every inbound message</strong> — with <strong>identical output</strong>.</p>
+  </div>
+
+  <h2>What I did</h2>
+
+  <ol class="steps">
+
+    <li class="step">
+      <span class="step-num" aria-hidden="true">01</span>
+      <div class="step-body">
+        <h3>Fixed the classifier</h3>
+        <p>Every classification sent the same long instructions again and re-processed emails that had already been handled. I changed it to a prime-then-fan-out pattern: one call primes the prompt cache, then seven parallel calls read from it at the cached price instead of paying full input price. I also removed a <code>reprocess=1</code> flag that was pushing already-classified emails back through the model. The pipeline's cost dropped by roughly 60%. The outputs did not change.</p>
+
+        <figure>
+          <svg viewBox="0 0 560 150" role="img" aria-label="Diagram: before, eight calls each pay full input price; after, one priming call fills the prompt cache and seven parallel calls read from it at the cached price.">
+            <g font-family="JetBrains Mono, ui-monospace, monospace" font-size="10">
+
+              <text x="0" y="12" fill="var(--muted)" letter-spacing="1.2">BEFORE</text>
+              <rect x="0" y="24" width="56" height="22" rx="2" fill="none" stroke="var(--flag)" stroke-width="1"/>
+              <text x="28" y="38.5" fill="var(--flag)" text-anchor="middle">full</text>
+              <rect x="64" y="24" width="56" height="22" rx="2" fill="none" stroke="var(--flag)" stroke-width="1"/>
+              <text x="92" y="38.5" fill="var(--flag)" text-anchor="middle">full</text>
+              <rect x="128" y="24" width="56" height="22" rx="2" fill="none" stroke="var(--flag)" stroke-width="1"/>
+              <text x="156" y="38.5" fill="var(--flag)" text-anchor="middle">full</text>
+              <rect x="192" y="24" width="56" height="22" rx="2" fill="none" stroke="var(--flag)" stroke-width="1"/>
+              <text x="220" y="38.5" fill="var(--flag)" text-anchor="middle">full</text>
+              <rect x="256" y="24" width="56" height="22" rx="2" fill="none" stroke="var(--flag)" stroke-width="1"/>
+              <text x="284" y="38.5" fill="var(--flag)" text-anchor="middle">full</text>
+              <rect x="320" y="24" width="56" height="22" rx="2" fill="none" stroke="var(--flag)" stroke-width="1"/>
+              <text x="348" y="38.5" fill="var(--flag)" text-anchor="middle">full</text>
+              <rect x="384" y="24" width="56" height="22" rx="2" fill="none" stroke="var(--flag)" stroke-width="1"/>
+              <text x="412" y="38.5" fill="var(--flag)" text-anchor="middle">full</text>
+              <rect x="448" y="24" width="56" height="22" rx="2" fill="none" stroke="var(--flag)" stroke-width="1"/>
+              <text x="476" y="38.5" fill="var(--flag)" text-anchor="middle">full</text>
+              <text x="514" y="38.5" fill="var(--muted)">&#215;8 full price</text>
+
+              <text x="0" y="78" fill="var(--muted)" letter-spacing="1.2">AFTER</text>
+
+              <rect x="0" y="102" width="88" height="24" rx="2" fill="var(--accent)" stroke="none"/>
+              <text x="44" y="118" fill="var(--surface)" text-anchor="middle" font-weight="700">prime</text>
+
+              <path d="M88 114 H108 M108 100 V128 M108 100 H124 M108 128 H124" stroke="var(--accent)" stroke-width="1.25" fill="none" stroke-linecap="square"/>
+
+              <rect x="124" y="90" width="60" height="20" rx="2" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1"/>
+              <text x="154" y="103.5" fill="var(--accent)" text-anchor="middle">cached</text>
+              <rect x="190" y="90" width="60" height="20" rx="2" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1"/>
+              <text x="220" y="103.5" fill="var(--accent)" text-anchor="middle">cached</text>
+              <rect x="256" y="90" width="60" height="20" rx="2" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1"/>
+              <text x="286" y="103.5" fill="var(--accent)" text-anchor="middle">cached</text>
+              <rect x="322" y="90" width="60" height="20" rx="2" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1"/>
+              <text x="352" y="103.5" fill="var(--accent)" text-anchor="middle">cached</text>
+
+              <rect x="124" y="118" width="60" height="20" rx="2" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1"/>
+              <text x="154" y="131.5" fill="var(--accent)" text-anchor="middle">cached</text>
+              <rect x="190" y="118" width="60" height="20" rx="2" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1"/>
+              <text x="220" y="131.5" fill="var(--accent)" text-anchor="middle">cached</text>
+              <rect x="256" y="118" width="60" height="20" rx="2" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1"/>
+              <text x="286" y="131.5" fill="var(--accent)" text-anchor="middle">cached</text>
+
+              <text x="394" y="131.5" fill="var(--muted)">1 full + &#215;7 cached</text>
+            </g>
+          </svg>
+          <figcaption>The same eight calls. Only the first one pays full input price; the rest read the primed cache.</figcaption>
+        </figure>
+      </div>
+    </li>
+
+    <li class="step">
+      <span class="step-num" aria-hidden="true">02</span>
+      <div class="step-body">
+        <h3>Measured the rest before changing it</h3>
+        <p>I went through every AI automation in the company and set up one way of measuring cost: Anthropic invoice data reconciled against per-call token counts times list pricing, broken down per workflow and per model. This gave the team cost per feature and caught a cache-token accounting mismatch that had been inflating the bill.</p>
+      </div>
+    </li>
+
+    <li class="step step--flag">
+      <span class="step-num" aria-hidden="true">03</span>
+      <div class="step-body">
+        <h3>Declined two changes</h3>
+        <p>With numbers in hand I evaluated moving workflows to a cheaper model, and a cascade setup where a cheap model answers first and a strong one is only called on low confidence. For this workload the quality loss and extra latency were not worth the savings. I recommended against both and wrote down the reasoning so it can be revisited when the traffic or the prices change.</p>
+      </div>
+    </li>
+
+    <li class="step">
+      <span class="step-num" aria-hidden="true">04</span>
+      <div class="step-body">
+        <h3>Put prompts in one place</h3>
+        <p>Prompts were string literals scattered across the codebase. I moved them into a prompt editor with access controls and a byte-parity check, so an edited prompt produces exactly the bytes the code used to hard-code. Product people can change wording without an engineer and without silent regressions.</p>
+      </div>
+    </li>
+
+    <li class="step">
+      <span class="step-num" aria-hidden="true">05</span>
+      <div class="step-body">
+        <h3>Made the jobs visible</h3>
+        <p>The automations ran out of a single <code>cron.php</code>. I split it into separate jobs and built a UI to edit cron tasks, plus an overview page showing what runs, when, and what it costs.</p>
+      </div>
+    </li>
+
+    <li class="step">
+      <span class="step-num" aria-hidden="true">06</span>
+      <div class="step-body">
+        <h3>Deleted dead AI code</h3>
+        <p>Leftovers from earlier experiments were removed so the team has less to reason about.</p>
+      </div>
+    </li>
+
+  </ol>
+
+  <h2>Result</h2>
+  <ul class="outcomes">
+    <li>Roughly 60% lower cost on the highest-volume pipeline, with identical output.</li>
+    <li>Per-feature and per-model cost that matches the actual invoice.</li>
+    <li>Two expensive changes avoided on the strength of measurement.</li>
+    <li>Prompts, jobs and costs editable and visible in a UI instead of buried in code.</li>
+  </ul>
+
+  <section class="closing">
+    <h2>If you run LLMs in production</h2>
+    <p>The order matters: measure first, find the structural waste — caching, redundant reprocessing, fan-outs that skip the cache — fix it as merged pull requests, and only then look at model changes, with evals.</p>
+    <p>I do this as a fixed-price one-week audit, with an optional implementation sprint afterwards.</p>
+  </section>
+
+  <div class="sig">
+    <span class="name">Teodor Velický</span>
+    <span>Applied AI Engineer · LLM cost optimization</span>
+    <a href="mailto:teodorvelicky@gmail.com">teodorvelicky@gmail.com</a>
+  </div>
+
+</main>
+</body>
+</html>
