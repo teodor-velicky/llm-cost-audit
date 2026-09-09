@@ -3,454 +3,1013 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Cutting a Production LLM Pipeline's Cost by 60%</title>
-<meta name="description" content="Case study: measuring, then removing structural waste from a real-estate tech company's LLM automations. Teodor Velický, Applied AI Engineer.">
-<meta property="og:title" content="Cutting a Production LLM Pipeline's Cost by 60%">
-<meta property="og:description" content="Case study: measuring, then removing structural waste from a real-estate tech company's LLM automations.">
+<title>Where the LLM Bill Was Going</title>
+<meta name="description" content="A production LLM cost audit: measuring first, removing structural waste, and declining two changes the numbers did not support. Teodor Velický, Applied AI Engineer.">
+<meta property="og:title" content="Where the LLM Bill Was Going">
+<meta property="og:description" content="A production LLM cost audit: measure first, remove structural waste, decline what the numbers do not support.">
 <meta property="og:type" content="article">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..700&family=IBM+Plex+Mono:wght@400;500;600&family=Newsreader:opsz,wght@6..72,300..600&display=swap">
 <style>
+/* ============ tokens ============ */
 :root{
-  --paper:#F4F6F3;
-  --surface:#FFFFFF;
-  --ink:#111614;
-  --ink-soft:#3A443F;
-  --muted:#5C6862;
-  --rule:#D9DED8;
-  --rule-soft:#E7EBE5;
-  --accent:#0E6A57;
-  --accent-soft:#DCEBE5;
-  --flag:#9E4529;
-  --flag-soft:#F2E2DC;
-  --shadow:0 1px 2px rgba(17,22,20,.05);
-}
-@media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]){
-    --paper:#0D110F;
-    --surface:#141917;
-    --ink:#E6EAE5;
-    --ink-soft:#C2CAC5;
-    --muted:#8A968F;
-    --rule:#242C29;
-    --rule-soft:#1B211E;
-    --accent:#57C4A7;
-    --accent-soft:#132621;
-    --flag:#D6866A;
-    --flag-soft:#2A1B15;
-    --shadow:none;
-  }
-}
-:root[data-theme="dark"]{
-  --paper:#0D110F;
-  --surface:#141917;
-  --ink:#E6EAE5;
-  --ink-soft:#C2CAC5;
-  --muted:#8A968F;
-  --rule:#242C29;
-  --rule-soft:#1B211E;
-  --accent:#57C4A7;
-  --accent-soft:#132621;
-  --flag:#D6866A;
-  --flag-soft:#2A1B15;
-  --shadow:none;
+  --paper:#EDEFF4;
+  --surface:#FBFCFE;
+  --sunken:#E4E8EF;
+  --ink:#12161D;
+  --ink-soft:#333C4A;
+  --muted:#68717F;
+  --faint:#8D96A4;
+  --rule:#CBD2DD;
+  --rule-soft:#DFE4EC;
+  --accent:#2B3FA6;
+  --accent-2:#5468CC;
+  --accent-soft:#DEE3F7;
+  --signal:#8A5A08;
+  --signal-soft:#F4E8D2;
+  --grid:rgba(18,22,29,.055);
+  --shadow:0 1px 0 rgba(18,22,29,.04);
+  color-scheme:light;
 }
 
+/* ============ base ============ */
 *{box-sizing:border-box}
-html{-webkit-text-size-adjust:100%}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
 body{
   margin:0;
-  background:var(--paper);
+  background-color:var(--paper);
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:28px 28px;
+  background-position:-1px -1px;
   color:var(--ink);
-  font-family:"Source Serif 4",Georgia,"Times New Roman",serif;
-  font-size:18px;
-  line-height:1.65;
+  font-family:Newsreader,Georgia,"Times New Roman",serif;
+  font-size:18.5px;
+  line-height:1.62;
   font-optical-sizing:auto;
 }
-.wrap{
-  max-width:44rem;
-  margin:0 auto;
-  padding:3.5rem 1.5rem 5rem;
-}
-@media (min-width:60rem){
-  .wrap{padding:5rem 1.5rem 6rem}
+.mono{font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace}
+.sans,h1,h2,h3,.sans *{font-family:Archivo,"Helvetica Neue",Arial,sans-serif}
+
+/* ============ shell ============ */
+.shell{max-width:78rem;margin:0 auto;padding:0 1.35rem;position:relative}
+.col{max-width:44rem;margin:0 auto}
+@media (min-width:70rem){
+  .col{margin:0 0 0 14rem}
 }
 
-/* ---------- header ---------- */
+/* ============ section rail ============ */
+.rail{display:none}
+@media (min-width:70rem){
+  .rail{
+    display:block;position:fixed;top:4.5rem;left:max(1.35rem,calc(50vw - 39rem + 1.35rem));
+    width:11.5rem;z-index:5;
+  }
+  .rail ol{list-style:none;margin:0;padding:0;border-left:1px solid var(--rule)}
+  .rail li{margin:0}
+  .rail a{
+    display:flex;gap:.6rem;align-items:baseline;
+    padding:.4rem 0 .4rem .85rem;margin-left:-1px;
+    border-left:1px solid transparent;
+    font-family:"IBM Plex Mono",ui-monospace,monospace;
+    font-size:.66rem;letter-spacing:.045em;text-transform:uppercase;
+    color:var(--faint);text-decoration:none;line-height:1.4;
+    transition:color .15s ease,border-color .15s ease;
+  }
+  .rail a:hover{color:var(--ink-soft)}
+  .rail a.on{color:var(--accent);border-left-color:var(--accent)}
+  .rail .n{color:var(--rule);font-weight:600}
+  .rail a.on .n{color:var(--accent)}
+  .rail-head{
+    font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:.6rem;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--faint);margin:0 0 .7rem .85rem;
+  }
+}
+
+/* ============ typography ============ */
 .eyebrow{
-  font-family:"JetBrains Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
-  font-size:.72rem;
-  font-weight:500;
-  letter-spacing:.14em;
-  text-transform:uppercase;
-  color:var(--accent);
-  margin:0 0 1.25rem;
+  font-family:"IBM Plex Mono",ui-monospace,monospace;
+  font-size:.665rem;font-weight:500;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--accent);margin:0;
 }
 h1{
-  font-family:Archivo,"Helvetica Neue",Arial,sans-serif;
-  font-weight:700;
-  font-size:clamp(2rem,5.5vw,3rem);
-  line-height:1.06;
-  letter-spacing:-.025em;
-  text-wrap:balance;
-  margin:0 0 1.5rem;
+  font-weight:700;font-variation-settings:"wdth" 108;
+  font-size:clamp(2.1rem,5.2vw,3.3rem);line-height:1.02;letter-spacing:-.028em;
+  text-wrap:balance;margin:1.1rem 0 0;
 }
-h1 .pct{
-  color:var(--accent);
-  font-variant-numeric:tabular-nums;
+.deck{
+  font-size:clamp(1.12rem,2.4vw,1.3rem);line-height:1.5;color:var(--ink-soft);
+  margin:1.25rem 0 0;max-width:33rem;
 }
-.standfirst{
-  font-size:1.15rem;
-  color:var(--ink-soft);
-  margin:0 0 2.5rem;
-  max-width:34rem;
-}
-
-.facts{
-  display:grid;
-  gap:0;
-  border-top:1px solid var(--rule);
-  border-bottom:1px solid var(--rule);
-  margin:0 0 3.5rem;
-}
-.fact{
-  display:grid;
-  grid-template-columns:6.5rem 1fr;
-  gap:1rem;
-  padding:.7rem 0;
-  align-items:baseline;
-}
-.fact + .fact{border-top:1px solid var(--rule-soft)}
-.fact dt{
-  font-family:"JetBrains Mono",ui-monospace,monospace;
-  font-size:.68rem;
-  font-weight:500;
-  letter-spacing:.1em;
-  text-transform:uppercase;
-  color:var(--muted);
-}
-.fact dd{
+h2{
+  font-weight:600;font-variation-settings:"wdth" 104;
+  font-size:1.5rem;line-height:1.18;letter-spacing:-.017em;text-wrap:balance;
   margin:0;
-  font-size:.98rem;
-  color:var(--ink-soft);
 }
+h3{
+  font-weight:600;font-variation-settings:"wdth" 100;
+  font-size:1.02rem;line-height:1.35;letter-spacing:-.004em;margin:0 0 .55rem;
+}
+p{margin:0 0 1.1rem}
+p:last-child{margin-bottom:0}
+strong{font-weight:600;color:var(--ink)}
+code{
+  font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:.82em;
+  background:var(--accent-soft);color:var(--ink);padding:.1em .34em;border-radius:2px;
+  white-space:nowrap;
+}
+a{color:var(--accent)}
 
-/* ---------- headline metric ---------- */
-.metric{
-  background:var(--surface);
-  border:1px solid var(--rule);
-  border-left:3px solid var(--accent);
-  padding:1.5rem 1.5rem 1.4rem;
-  margin:0 0 3.5rem;
+/* ============ masthead ============ */
+.masthead{padding:3.25rem 0 0}
+@media (min-width:70rem){.masthead{padding-top:4.25rem}}
+
+.spec{
+  margin:2.5rem 0 0;border-top:1px solid var(--ink);border-bottom:1px solid var(--rule);
+}
+.spec-row{
+  display:grid;grid-template-columns:6.5rem 1fr;gap:1rem;padding:.72rem 0;align-items:baseline;
+}
+.spec-row + .spec-row{border-top:1px solid var(--rule-soft)}
+.spec-row dt{
+  font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:.63rem;font-weight:500;
+  letter-spacing:.13em;text-transform:uppercase;color:var(--faint);
+}
+.spec-row dd{margin:0;font-size:.95rem;color:var(--ink-soft);line-height:1.5}
+
+/* ============ headline result ============ */
+.result{
+  margin:2.75rem 0 0;background:var(--surface);border:1px solid var(--rule);
   box-shadow:var(--shadow);
 }
-.metric-figure{
-  font-family:Archivo,sans-serif;
-  font-weight:700;
-  font-size:clamp(2.75rem,9vw,3.75rem);
-  line-height:.95;
-  letter-spacing:-.03em;
-  color:var(--accent);
-  font-variant-numeric:tabular-nums;
-  display:block;
+.result-top{
+  display:flex;flex-wrap:wrap;align-items:flex-end;gap:.5rem 1.5rem;
+  padding:1.4rem 1.4rem 1rem;border-bottom:1px solid var(--rule-soft);
 }
-.metric-label{
-  font-family:"JetBrains Mono",ui-monospace,monospace;
-  font-size:.75rem;
-  letter-spacing:.06em;
-  color:var(--muted);
-  margin:.7rem 0 0;
-  line-height:1.5;
+.big{
+  font-family:Archivo,sans-serif;font-weight:700;font-variation-settings:"wdth" 100;
+  font-size:clamp(3rem,10vw,4.25rem);line-height:.86;letter-spacing:-.04em;
+  color:var(--accent);font-variant-numeric:tabular-nums;
 }
-.metric-label strong{color:var(--ink-soft);font-weight:500}
-
-/* ---------- sections ---------- */
-h2{
-  font-family:Archivo,sans-serif;
-  font-weight:600;
-  font-size:1.35rem;
-  letter-spacing:-.01em;
-  line-height:1.25;
-  margin:3.25rem 0 1rem;
-  text-wrap:balance;
+.big-cap{
+  font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:.72rem;line-height:1.5;
+  color:var(--muted);max-width:19rem;letter-spacing:.02em;
 }
-h2:first-of-type{margin-top:0}
-p{margin:0 0 1.15rem}
-p:last-child{margin-bottom:0}
-code{
-  font-family:"JetBrains Mono",ui-monospace,monospace;
-  font-size:.85em;
-  background:var(--accent-soft);
-  color:var(--ink);
-  padding:.1em .35em;
-  border-radius:3px;
+.bars{padding:1.15rem 1.4rem 1.4rem;display:flex;flex-direction:column;gap:.7rem}
+.bar-row{display:grid;grid-template-columns:4.4rem 1fr 4.6rem;gap:.75rem;align-items:center}
+.bar-lab{
+  font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:.63rem;letter-spacing:.11em;
+  text-transform:uppercase;color:var(--faint);
+}
+.bar-track{height:16px;background:var(--sunken);position:relative;overflow:hidden}
+.bar-fill{position:absolute;inset:0 auto 0 0;height:100%}
+.bar-fill.before{background:repeating-linear-gradient(135deg,var(--signal) 0 2px,transparent 2px 6px);border-right:2px solid var(--signal)}
+.bar-fill.after{background:var(--accent)}
+.bar-val{
+  font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:.72rem;color:var(--ink-soft);
+  font-variant-numeric:tabular-nums;text-align:right;
 }
 
-.steps{
-  list-style:none;
-  margin:0;
-  padding:0;
-  display:flex;
-  flex-direction:column;
-  gap:2.25rem;
+/* ============ sections ============ */
+section{padding:3.5rem 0 0;scroll-margin-top:2rem}
+.sec-head{display:grid;grid-template-columns:3.1rem 1fr;gap:1rem;align-items:baseline;margin-bottom:1.25rem}
+.sec-n{
+  font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:.68rem;font-weight:600;
+  letter-spacing:.06em;color:var(--accent);padding-top:.3rem;
 }
-.step{
-  display:grid;
-  grid-template-columns:2rem 1fr;
-  gap:1.1rem;
-}
-@media (max-width:34rem){
-  .step{grid-template-columns:1.6rem 1fr;gap:.85rem}
-}
-.step-num{
-  font-family:"JetBrains Mono",ui-monospace,monospace;
-  font-size:.8rem;
-  font-weight:700;
-  color:var(--accent);
-  padding-top:.42rem;
-  font-variant-numeric:tabular-nums;
-}
-.step h3{
-  font-family:Archivo,sans-serif;
-  font-weight:600;
-  font-size:1.08rem;
-  letter-spacing:-.005em;
-  margin:0 0 .5rem;
-  line-height:1.35;
-}
-.step p{font-size:1rem;color:var(--ink-soft)}
+.sec-body{max-width:40rem}
+@media (min-width:46rem){.sec-body{margin-left:4.1rem}}
+.sec-body > p{color:var(--ink-soft);font-size:1.02rem}
 
-.step--flag .step-num{color:var(--flag)}
-.step--flag .step-body{
-  border-left:2px solid var(--flag);
-  background:var(--flag-soft);
-  padding:.9rem 1.1rem;
-  margin-left:-1.1rem;
-}
-.step--flag h3{margin-top:0}
+.divider{height:1px;background:var(--rule);margin-top:3.5rem}
 
-/* ---------- diagram ---------- */
+/* ============ figures ============ */
 figure{
-  margin:1.5rem 0 0;
-  padding:1.15rem 1.15rem .9rem;
-  background:var(--surface);
-  border:1px solid var(--rule);
-  overflow-x:auto;
+  margin:1.6rem 0 0;background:var(--surface);border:1px solid var(--rule);
+  box-shadow:var(--shadow);
 }
-figure svg{display:block;width:100%;height:auto;min-width:19rem}
+.fig-bar{
+  display:flex;flex-wrap:wrap;gap:.5rem .9rem;align-items:center;justify-content:space-between;
+  padding:.5rem .85rem;border-bottom:1px solid var(--rule-soft);background:var(--sunken);
+}
+.fig-id{
+  font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:.6rem;letter-spacing:.15em;
+  text-transform:uppercase;color:var(--faint);
+}
+.fig-canvas{padding:1.1rem .95rem .6rem;overflow-x:auto}
+figure svg{display:block;width:100%;height:auto;min-width:20rem;color:var(--muted)}
 figcaption{
-  font-family:"JetBrains Mono",ui-monospace,monospace;
-  font-size:.68rem;
-  letter-spacing:.05em;
-  color:var(--muted);
-  margin-top:.85rem;
-  line-height:1.55;
+  font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:.665rem;line-height:1.6;
+  letter-spacing:.015em;color:var(--muted);padding:.15rem .95rem 1rem;
 }
 
-/* ---------- outcomes ---------- */
-.outcomes{
-  list-style:none;
-  margin:0;
-  padding:0;
-  display:flex;
-  flex-direction:column;
-  border-top:1px solid var(--rule);
+/* segmented toggle */
+.seg{display:inline-flex;border:1px solid var(--rule);background:var(--surface)}
+.seg button{
+  font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:.63rem;letter-spacing:.12em;
+  text-transform:uppercase;padding:.35rem .7rem;border:0;background:transparent;
+  color:var(--muted);cursor:pointer;line-height:1.4;
 }
+.seg button + button{border-left:1px solid var(--rule)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--surface);font-weight:600}
+.seg button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+
+.readout{
+  display:flex;flex-wrap:wrap;gap:.15rem 1.4rem;padding:.6rem .95rem .8rem;
+  border-top:1px solid var(--rule-soft);
+  font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:.68rem;color:var(--muted);
+}
+.readout b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+
+/* ============ calculator ============ */
+.calc{
+  margin:1.6rem 0 0;border:1px solid var(--accent);background:var(--surface);box-shadow:var(--shadow);
+}
+.calc-head{
+  padding:.75rem .95rem;border-bottom:1px solid var(--rule-soft);background:var(--accent-soft);
+  display:flex;flex-wrap:wrap;gap:.3rem .9rem;align-items:baseline;justify-content:space-between;
+}
+.calc-title{
+  font-family:Archivo,sans-serif;font-weight:600;font-size:.86rem;letter-spacing:-.005em;color:var(--ink);
+}
+.calc-sub{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:.62rem;letter-spacing:.09em;text-transform:uppercase;color:var(--accent)}
+.calc-grid{display:grid;grid-template-columns:1fr;gap:0}
+@media (min-width:38rem){.calc-grid{grid-template-columns:1fr 1fr}}
+.field{padding:.7rem .95rem;border-bottom:1px solid var(--rule-soft)}
+@media (min-width:38rem){
+  .field:nth-child(odd){border-right:1px solid var(--rule-soft)}
+}
+.field label{
+  display:block;font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:.62rem;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--faint);margin-bottom:.3rem;
+}
+.field input[type=number]{
+  width:100%;font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:.95rem;
+  padding:.32rem .45rem;border:1px solid var(--rule);background:var(--paper);color:var(--ink);
+  font-variant-numeric:tabular-nums;border-radius:0;
+}
+.field input:focus-visible{outline:2px solid var(--accent);outline-offset:0}
+.field .hint{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:.6rem;color:var(--faint);margin-top:.28rem;display:block}
+
+.calc-out{padding:1rem .95rem 1.1rem;background:var(--sunken);border-top:1px solid var(--rule)}
+.out-row{display:grid;grid-template-columns:7.5rem 1fr auto;gap:.7rem;align-items:center;margin-bottom:.55rem}
+.out-lab{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:.63rem;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.out-track{height:14px;background:var(--rule-soft);position:relative;overflow:hidden}
+.out-fill{position:absolute;inset:0 auto 0 0;transition:width .25s ease}
+.out-fill.b{background:repeating-linear-gradient(135deg,var(--signal) 0 2px,transparent 2px 6px);border-right:2px solid var(--signal)}
+.out-fill.a{background:var(--accent)}
+.out-val{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:.75rem;color:var(--ink);font-variant-numeric:tabular-nums;min-width:6.5rem;text-align:right}
+.verdict{
+  margin-top:.9rem;padding-top:.8rem;border-top:1px solid var(--rule);
+  display:flex;flex-wrap:wrap;gap:.4rem 1.5rem;align-items:baseline;
+}
+.verdict-big{
+  font-family:Archivo,sans-serif;font-weight:700;font-size:1.9rem;letter-spacing:-.03em;
+  color:var(--accent);font-variant-numeric:tabular-nums;line-height:1;
+}
+.verdict-note{font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:.65rem;color:var(--muted);line-height:1.55;max-width:24rem}
+.calc-foot{
+  padding:.6rem .95rem .8rem;font-family:"IBM Plex Mono",ui-monospace,monospace;
+  font-size:.6rem;line-height:1.6;color:var(--faint);border-top:1px solid var(--rule-soft);
+}
+
+/* ============ declined / decision log ============ */
+.log{margin:1.5rem 0 0;border:1px solid var(--rule);border-left:3px solid var(--signal);background:var(--surface)}
+.log-item{padding:1rem 1.1rem}
+.log-item + .log-item{border-top:1px solid var(--rule-soft)}
+.log-top{display:flex;flex-wrap:wrap;gap:.4rem .8rem;align-items:baseline;margin-bottom:.5rem}
+.log-name{font-family:Archivo,sans-serif;font-weight:600;font-size:.95rem;color:var(--ink)}
+.pill{
+  font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:.58rem;letter-spacing:.13em;
+  text-transform:uppercase;padding:.16rem .45rem;border:1px solid var(--signal);color:var(--signal);
+  background:var(--signal-soft);white-space:nowrap;
+}
+.log-item p{font-size:.94rem;color:var(--ink-soft);margin-bottom:.6rem}
+.revisit{
+  font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:.65rem;color:var(--muted);
+  line-height:1.6;padding-top:.55rem;border-top:1px dashed var(--rule);
+}
+.revisit b{color:var(--ink-soft);font-weight:600}
+
+/* ============ outcomes ============ */
+.outcomes{list-style:none;margin:1.4rem 0 0;padding:0;border-top:1px solid var(--rule)}
 .outcomes li{
-  border-bottom:1px solid var(--rule-soft);
-  padding:.9rem 0 .9rem 1.5rem;
-  position:relative;
-  font-size:1rem;
-  color:var(--ink-soft);
+  border-bottom:1px solid var(--rule-soft);padding:.85rem 0 .85rem 1.7rem;position:relative;
+  font-size:1rem;color:var(--ink-soft);
 }
 .outcomes li::before{
-  content:"";
-  position:absolute;
-  left:0;
-  top:1.45rem;
-  width:.5rem;
-  height:1px;
-  background:var(--accent);
+  content:"";position:absolute;left:0;top:1.42rem;width:.8rem;height:2px;background:var(--accent);
 }
 
-/* ---------- closing ---------- */
-.closing{
-  margin-top:3.5rem;
-  padding-top:2.25rem;
-  border-top:2px solid var(--ink);
-}
-.closing h2{margin-top:0}
+/* ============ closing ============ */
+.closing{margin-top:1.5rem;padding:1.5rem 1.4rem;background:var(--surface);border:1px solid var(--ink)}
+.closing h3{font-size:1.1rem}
+.closing p{font-size:.98rem;color:var(--ink-soft)}
 
 .sig{
-  margin-top:3rem;
-  padding-top:1.5rem;
-  border-top:1px solid var(--rule);
-  display:flex;
-  flex-wrap:wrap;
-  gap:.35rem 1.25rem;
-  align-items:baseline;
-  font-family:"JetBrains Mono",ui-monospace,monospace;
-  font-size:.78rem;
-  letter-spacing:.02em;
-  color:var(--muted);
+  margin:3.5rem 0 0;padding:1.4rem 0 4.5rem;border-top:2px solid var(--ink);
+  display:flex;flex-wrap:wrap;gap:.35rem 1.4rem;align-items:baseline;
+  font-family:"IBM Plex Mono",ui-monospace,monospace;font-size:.72rem;letter-spacing:.02em;color:var(--muted);
 }
-.sig .name{color:var(--ink);font-weight:700}
+.sig .who{font-family:Archivo,sans-serif;font-weight:700;font-size:.9rem;color:var(--ink);letter-spacing:-.01em}
 .sig a{color:var(--accent);text-decoration:none;border-bottom:1px solid var(--accent-soft)}
-.sig a:hover,.sig a:focus-visible{border-bottom-color:var(--accent)}
-a:focus-visible,:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.sig a:hover{border-bottom-color:var(--accent)}
 
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 @media (prefers-reduced-motion:reduce){
+  html{scroll-behavior:auto}
   *{animation:none!important;transition:none!important}
 }
 </style>
 </head>
 <body>
-<main class="wrap">
 
-  <p class="eyebrow">Case study · LLM cost engineering</p>
+<nav class="rail" aria-label="Sections">
+  <p class="rail-head">Contents</p>
+  <ol>
+    <li><a href="#s1"><span class="n">01</span><span>The classifier</span></a></li>
+    <li><a href="#s2"><span class="n">02</span><span>Measurement</span></a></li>
+    <li><a href="#s3"><span class="n">03</span><span>Declined</span></a></li>
+    <li><a href="#s4"><span class="n">04</span><span>Prompts</span></a></li>
+    <li><a href="#s5"><span class="n">05</span><span>Jobs &amp; costs</span></a></li>
+    <li><a href="#s6"><span class="n">06</span><span>Dead code</span></a></li>
+    <li><a href="#s7"><span class="n">07</span><span>The order</span></a></li>
+  </ol>
+</nav>
 
-  <h1>How I cut a production LLM pipeline's cost by about <span class="pct">60%</span></h1>
+<div class="shell">
+<div class="col">
 
-  <p class="standfirst">The team had shipped AI features quickly and they worked. Nobody could say what each one cost, which model it ran on, or whether the bill was growing because of real usage or because of waste.</p>
+  <!-- ================= masthead ================= -->
+  <header class="masthead">
+    <p class="eyebrow">Engagement note &nbsp;·&nbsp; LLM cost engineering</p>
+    <h1>Where the LLM bill was going</h1>
+    <p class="deck">The team had shipped AI features quickly and they worked. Nobody could say what each one cost, which model it ran on, or whether the bill was growing because of real usage or because of waste.</p>
 
-  <dl class="facts">
-    <div class="fact"><dt>Client</dt><dd>A real-estate technology company running several LLM automations in production. Name under NDA; references on request.</dd></div>
-    <div class="fact"><dt>Role</dt><dd>First dedicated AI consultant, part time, 2026.</dd></div>
-    <div class="fact"><dt>Stack</dt><dd>PHP monolith with cron jobs, Anthropic API, some TypeScript and Python tooling.</dd></div>
-  </dl>
+    <dl class="spec">
+      <div class="spec-row"><dt>Client</dt><dd>A real-estate technology company running several LLM automations in production. Name under NDA; references on request.</dd></div>
+      <div class="spec-row"><dt>Role</dt><dd>First dedicated AI consultant. Part time, 2026.</dd></div>
+      <div class="spec-row"><dt>Stack</dt><dd>PHP monolith with cron jobs, Anthropic API, some TypeScript and Python tooling.</dd></div>
+      <div class="spec-row"><dt>Scope</dt><dd>Audit every AI automation, fix what measurement justifies, leave the team able to see and change it without me.</dd></div>
+    </dl>
 
-  <div class="metric">
-    <span class="metric-figure">~60%</span>
-    <p class="metric-label">lower cost on the highest-volume pipeline — an email classifier running on <strong>every inbound message</strong> — with <strong>identical output</strong>.</p>
-  </div>
+    <div class="result">
+      <div class="result-top">
+        <div class="big">~60%</div>
+        <p class="big-cap">lower cost on the highest-volume pipeline — an email classifier running on every inbound message — with identical output.</p>
+      </div>
+      <div class="bars">
+        <div class="bar-row">
+          <span class="bar-lab">Before</span>
+          <div class="bar-track"><div class="bar-fill before" style="width:100%"></div></div>
+          <span class="bar-val">100</span>
+        </div>
+        <div class="bar-row">
+          <span class="bar-lab">After</span>
+          <div class="bar-track"><div class="bar-fill after" style="width:40%"></div></div>
+          <span class="bar-val">≈40</span>
+        </div>
+      </div>
+    </div>
+  </header>
 
-  <h2>What I did</h2>
+  <!-- ================= 01 ================= -->
+  <section id="s1">
+    <div class="sec-head">
+      <span class="sec-n">01</span>
+      <h2>The classifier was paying full price eight times over</h2>
+    </div>
+    <div class="sec-body">
+      <p>Every classification re-sent the same long instructions and re-processed emails that had already been handled. I changed it to a <strong>prime-then-fan-out</strong> pattern: one call writes the shared prefix into the prompt cache, then the parallel calls read it back at the cached rate instead of paying full input price. I also removed a <code>reprocess=1</code> flag that was pushing already-classified emails back through the model.</p>
+      <p>The pipeline's cost dropped by roughly 60%. The outputs did not change.</p>
 
-  <ol class="steps">
+      <figure>
+        <div class="fig-bar">
+          <span class="fig-id">Fig. 1 — Request shape</span>
+          <div class="seg" role="group" aria-label="Show pipeline before or after the change">
+            <button type="button" id="btnBefore" aria-pressed="false">Before</button>
+            <button type="button" id="btnAfter" aria-pressed="true">After</button>
+          </div>
+        </div>
+        <div class="fig-canvas">
+          <svg id="fanSvg" viewBox="0 0 600 214" role="img" aria-label="Before: eight calls each send the same 5,000-token prefix at full input price. After: one call writes the prefix to the prompt cache at 1.25 times price and seven calls read it back at 0.1 times price.">
+            <defs>
+              <marker id="ar1" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M0 0.5 L7.5 4 L0 7.5 z" fill="currentColor"/>
+              </marker>
+              <marker id="ar2" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M0 0.5 L7.5 4 L0 7.5 z" fill="var(--accent)"/>
+              </marker>
+            </defs>
 
-    <li class="step">
-      <span class="step-num" aria-hidden="true">01</span>
-      <div class="step-body">
-        <h3>Fixed the classifier</h3>
-        <p>Every classification sent the same long instructions again and re-processed emails that had already been handled. I changed it to a prime-then-fan-out pattern: one call primes the prompt cache, then seven parallel calls read from it at the cached price instead of paying full input price. I also removed a <code>reprocess=1</code> flag that was pushing already-classified emails back through the model. The pipeline's cost dropped by roughly 60%. The outputs did not change.</p>
+            <!-- ============ BEFORE ============ -->
+            <g id="gBefore">
+              <text x="0" y="12" class="mono" font-size="10.5" fill="var(--faint)" letter-spacing="1.6">INBOUND EMAIL</text>
+              <rect x="0" y="22" width="104" height="30" fill="none" stroke="currentColor" stroke-width="1"/>
+              <text x="52" y="41.5" class="mono" font-size="11" fill="var(--ink)" text-anchor="middle">message</text>
 
-        <figure>
-          <svg viewBox="0 0 560 150" role="img" aria-label="Diagram: before, eight calls each pay full input price; after, one priming call fills the prompt cache and seven parallel calls read from it at the cached price.">
-            <g font-family="JetBrains Mono, ui-monospace, monospace" font-size="10">
+              <path d="M104 37 H140" stroke="currentColor" stroke-width="1.1" fill="none" marker-end="url(#ar1)"/>
 
-              <text x="0" y="12" fill="var(--muted)" letter-spacing="1.2">BEFORE</text>
-              <rect x="0" y="24" width="56" height="22" rx="2" fill="none" stroke="var(--flag)" stroke-width="1"/>
-              <text x="28" y="38.5" fill="var(--flag)" text-anchor="middle">full</text>
-              <rect x="64" y="24" width="56" height="22" rx="2" fill="none" stroke="var(--flag)" stroke-width="1"/>
-              <text x="92" y="38.5" fill="var(--flag)" text-anchor="middle">full</text>
-              <rect x="128" y="24" width="56" height="22" rx="2" fill="none" stroke="var(--flag)" stroke-width="1"/>
-              <text x="156" y="38.5" fill="var(--flag)" text-anchor="middle">full</text>
-              <rect x="192" y="24" width="56" height="22" rx="2" fill="none" stroke="var(--flag)" stroke-width="1"/>
-              <text x="220" y="38.5" fill="var(--flag)" text-anchor="middle">full</text>
-              <rect x="256" y="24" width="56" height="22" rx="2" fill="none" stroke="var(--flag)" stroke-width="1"/>
-              <text x="284" y="38.5" fill="var(--flag)" text-anchor="middle">full</text>
-              <rect x="320" y="24" width="56" height="22" rx="2" fill="none" stroke="var(--flag)" stroke-width="1"/>
-              <text x="348" y="38.5" fill="var(--flag)" text-anchor="middle">full</text>
-              <rect x="384" y="24" width="56" height="22" rx="2" fill="none" stroke="var(--flag)" stroke-width="1"/>
-              <text x="412" y="38.5" fill="var(--flag)" text-anchor="middle">full</text>
-              <rect x="448" y="24" width="56" height="22" rx="2" fill="none" stroke="var(--flag)" stroke-width="1"/>
-              <text x="476" y="38.5" fill="var(--flag)" text-anchor="middle">full</text>
-              <text x="514" y="38.5" fill="var(--muted)">&#215;8 full price</text>
+              <g>
+                <rect x="146" y="10" width="200" height="122" fill="none" stroke="var(--signal)" stroke-width="1" stroke-dasharray="3 3"/>
+                <text x="152" y="24" class="mono" font-size="10" fill="var(--signal)" letter-spacing="1.2">8 CALLS, NO CACHE</text>
 
-              <text x="0" y="78" fill="var(--muted)" letter-spacing="1.2">AFTER</text>
+                <rect x="158" y="32" width="176" height="16" fill="var(--signal-soft)" stroke="var(--signal)" stroke-width=".9"/>
+                <text x="164" y="43.5" class="mono" font-size="9.5" fill="var(--signal)">prefix 5,000 tok · ×1.0</text>
+                <rect x="158" y="52" width="176" height="16" fill="var(--signal-soft)" stroke="var(--signal)" stroke-width=".9"/>
+                <text x="164" y="63.5" class="mono" font-size="9.5" fill="var(--signal)">prefix 5,000 tok · ×1.0</text>
+                <rect x="158" y="72" width="176" height="16" fill="var(--signal-soft)" stroke="var(--signal)" stroke-width=".9"/>
+                <text x="164" y="83.5" class="mono" font-size="9.5" fill="var(--signal)">prefix 5,000 tok · ×1.0</text>
+                <text x="246" y="102" class="mono" font-size="11" fill="var(--signal)" text-anchor="middle">⋮</text>
+                <rect x="158" y="106" width="176" height="16" fill="var(--signal-soft)" stroke="var(--signal)" stroke-width=".9"/>
+                <text x="164" y="117.5" class="mono" font-size="9.5" fill="var(--signal)">prefix 5,000 tok · ×1.0</text>
+              </g>
 
-              <rect x="0" y="102" width="88" height="24" rx="2" fill="var(--accent)" stroke="none"/>
-              <text x="44" y="118" fill="var(--surface)" text-anchor="middle" font-weight="700">prime</text>
+              <path d="M346 71 H392" stroke="currentColor" stroke-width="1.1" fill="none" marker-end="url(#ar1)"/>
+              <text x="352" y="65" class="mono" font-size="9.5" fill="var(--muted)">billed</text>
 
-              <path d="M88 114 H108 M108 100 V128 M108 100 H124 M108 128 H124" stroke="var(--accent)" stroke-width="1.25" fill="none" stroke-linecap="square"/>
+              <rect x="398" y="52" width="126" height="38" fill="none" stroke="var(--signal)" stroke-width="1.4"/>
+              <text x="461" y="70" class="mono" font-size="10" fill="var(--muted)" text-anchor="middle">input tokens</text>
+              <text x="461" y="83" class="mono" font-size="12" font-weight="600" fill="var(--signal)" text-anchor="middle">49,600</text>
 
-              <rect x="124" y="90" width="60" height="20" rx="2" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1"/>
-              <text x="154" y="103.5" fill="var(--accent)" text-anchor="middle">cached</text>
-              <rect x="190" y="90" width="60" height="20" rx="2" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1"/>
-              <text x="220" y="103.5" fill="var(--accent)" text-anchor="middle">cached</text>
-              <rect x="256" y="90" width="60" height="20" rx="2" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1"/>
-              <text x="286" y="103.5" fill="var(--accent)" text-anchor="middle">cached</text>
-              <rect x="322" y="90" width="60" height="20" rx="2" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1"/>
-              <text x="352" y="103.5" fill="var(--accent)" text-anchor="middle">cached</text>
+              <text x="0" y="160" class="mono" font-size="10.5" fill="var(--faint)" letter-spacing="1.6">ALSO BILLED FOR</text>
+              <rect x="0" y="170" width="290" height="26" fill="var(--signal-soft)" stroke="var(--signal)" stroke-width=".9" stroke-dasharray="4 3"/>
+              <text x="10" y="187" class="mono" font-size="10.5" fill="var(--signal)">reprocess=1 → already-classified mail, re-run</text>
+              <path d="M290 183 H330" stroke="var(--signal)" stroke-width="1.1" fill="none" marker-end="url(#ar1)"/>
+              <text x="338" y="187" class="mono" font-size="10.5" fill="var(--muted)">no new output</text>
+            </g>
 
-              <rect x="124" y="118" width="60" height="20" rx="2" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1"/>
-              <text x="154" y="131.5" fill="var(--accent)" text-anchor="middle">cached</text>
-              <rect x="190" y="118" width="60" height="20" rx="2" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1"/>
-              <text x="220" y="131.5" fill="var(--accent)" text-anchor="middle">cached</text>
-              <rect x="256" y="118" width="60" height="20" rx="2" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1"/>
-              <text x="286" y="131.5" fill="var(--accent)" text-anchor="middle">cached</text>
+            <!-- ============ AFTER ============ -->
+            <g id="gAfter">
+              <text x="0" y="12" class="mono" font-size="10.5" fill="var(--faint)" letter-spacing="1.6">INBOUND EMAIL</text>
+              <rect x="0" y="22" width="104" height="30" fill="none" stroke="currentColor" stroke-width="1"/>
+              <text x="52" y="41.5" class="mono" font-size="11" fill="var(--ink)" text-anchor="middle">message</text>
 
-              <text x="394" y="131.5" fill="var(--muted)">1 full + &#215;7 cached</text>
+              <path d="M104 37 H140" stroke="currentColor" stroke-width="1.1" fill="none" marker-end="url(#ar1)"/>
+
+              <rect x="146" y="22" width="120" height="30" fill="var(--accent)"/>
+              <text x="206" y="41.5" class="mono" font-size="11" font-weight="600" fill="var(--surface)" text-anchor="middle">prime · write</text>
+              <text x="146" y="67" class="mono" font-size="9.5" fill="var(--accent)">5,000 tok · ×1.25</text>
+
+              <path d="M266 37 H296" stroke="var(--accent)" stroke-width="1.2" fill="none"/>
+              <path d="M296 37 V 103" stroke="var(--accent)" stroke-width="1.2" fill="none"/>
+              <path d="M296 37 H326 M296 70 H326 M296 103 H326" stroke="var(--accent)" stroke-width="1.2" fill="none" marker-end="url(#ar2)"/>
+              <text x="296" y="124" class="mono" font-size="9.5" fill="var(--accent)">×7 reads</text>
+
+              <rect x="332" y="27" width="146" height="20" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width=".9"/>
+              <text x="339" y="41" class="mono" font-size="9.5" fill="var(--accent)">cache hit · ×0.1</text>
+              <rect x="332" y="60" width="146" height="20" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width=".9"/>
+              <text x="339" y="74" class="mono" font-size="9.5" fill="var(--accent)">cache hit · ×0.1</text>
+              <text x="405" y="90" class="mono" font-size="11" fill="var(--accent)" text-anchor="middle">⋮</text>
+              <rect x="332" y="93" width="146" height="20" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width=".9"/>
+              <text x="339" y="107" class="mono" font-size="9.5" fill="var(--accent)">cache hit · ×0.1</text>
+
+              <rect x="332" y="140" width="146" height="38" fill="none" stroke="var(--accent)" stroke-width="1.4"/>
+              <text x="405" y="158" class="mono" font-size="10" fill="var(--muted)" text-anchor="middle">input tokens</text>
+              <text x="405" y="171" class="mono" font-size="12" font-weight="600" fill="var(--accent)" text-anchor="middle">19,350</text>
+
+              <text x="0" y="152" class="mono" font-size="10.5" fill="var(--muted)">same 8 calls · same outputs</text>
+              <text x="0" y="171" class="mono" font-size="10.5" fill="var(--accent)" font-weight="600">reprocess=1 removed</text>
             </g>
           </svg>
-          <figcaption>The same eight calls. Only the first one pays full input price; the rest read the primed cache.</figcaption>
-        </figure>
+        </div>
+        <figcaption id="figCap">The prefix is written once and read back seven times. Only the write pays more than list price; every read costs a tenth.</figcaption>
+        <div class="readout">
+          <span>State: <b id="roState">After</b></span>
+          <span>Input tokens per message: <b id="roTok">19,350</b></span>
+          <span>Change: <b id="roDelta">−61.0%</b></span>
+        </div>
+      </figure>
+
+      <!-- ============ calculator ============ -->
+      <div class="calc">
+        <div class="calc-head">
+          <span class="calc-title">Run it on your own pipeline</span>
+          <span class="calc-sub">Live model</span>
+        </div>
+        <div class="calc-grid">
+          <div class="field">
+            <label for="fN">Parallel calls per request</label>
+            <input type="number" id="fN" value="8" min="1" max="200" step="1">
+            <span class="hint">The fan-out width. 1 = no fan-out.</span>
+          </div>
+          <div class="field">
+            <label for="fS">Shared prefix tokens</label>
+            <input type="number" id="fS" value="5000" min="0" max="2000000" step="100">
+            <span class="hint">System prompt, instructions, few-shot — identical across calls.</span>
+          </div>
+          <div class="field">
+            <label for="fU">Unique tokens per call</label>
+            <input type="number" id="fU" value="1200" min="0" max="2000000" step="50">
+            <span class="hint">The payload. Never cacheable; always full price.</span>
+          </div>
+          <div class="field">
+            <label for="fR">Requests per day</label>
+            <input type="number" id="fR" value="2000" min="0" max="10000000" step="100">
+            <span class="hint">How often the fan-out runs.</span>
+          </div>
+          <div class="field">
+            <label for="fP">Input price, $ per 1M tokens</label>
+            <input type="number" id="fP" value="3.00" min="0" max="1000" step="0.25">
+            <span class="hint">Your model's list input price.</span>
+          </div>
+          <div class="field">
+            <label for="fT">Cache lifetime</label>
+            <div class="seg" role="group" aria-label="Cache time to live">
+              <button type="button" id="ttl5" aria-pressed="true">5 min · ×1.25</button>
+              <button type="button" id="ttl60" aria-pressed="false">1 hr · ×2.0</button>
+            </div>
+            <span class="hint">Write multiplier. Reads are ×0.1 either way.</span>
+          </div>
+        </div>
+
+        <div class="calc-out">
+          <div class="out-row">
+            <span class="out-lab">No cache</span>
+            <div class="out-track"><div class="out-fill b" id="obar" style="width:100%"></div></div>
+            <span class="out-val" id="oNaive">$8,928 / mo</span>
+          </div>
+          <div class="out-row">
+            <span class="out-lab">Primed</span>
+            <div class="out-track"><div class="out-fill a" id="abar" style="width:39.0%"></div></div>
+            <span class="out-val" id="oPrimed">$3,483 / mo</span>
+          </div>
+          <div class="verdict">
+            <span class="verdict-big" id="oPct">−61.0%</span>
+            <span class="verdict-note" id="oNote">Saves <b>$5,445</b> a month on input tokens. Break-even at <b>2</b> or more calls per request.</span>
+          </div>
+        </div>
+        <p class="calc-foot">Input tokens only — output is unchanged by caching and is excluded. Multipliers are Anthropic's published prompt-cache rates: write ×1.25 (5 min) or ×2.0 (1 hr), read ×0.1. Month = 30 days. Defaults are the shape of the pipeline in this engagement.</p>
       </div>
-    </li>
-
-    <li class="step">
-      <span class="step-num" aria-hidden="true">02</span>
-      <div class="step-body">
-        <h3>Measured the rest before changing it</h3>
-        <p>I went through every AI automation in the company and set up one way of measuring cost: Anthropic invoice data reconciled against per-call token counts times list pricing, broken down per workflow and per model. This gave the team cost per feature and caught a cache-token accounting mismatch that had been inflating the bill.</p>
-      </div>
-    </li>
-
-    <li class="step step--flag">
-      <span class="step-num" aria-hidden="true">03</span>
-      <div class="step-body">
-        <h3>Declined two changes</h3>
-        <p>With numbers in hand I evaluated moving workflows to a cheaper model, and a cascade setup where a cheap model answers first and a strong one is only called on low confidence. For this workload the quality loss and extra latency were not worth the savings. I recommended against both and wrote down the reasoning so it can be revisited when the traffic or the prices change.</p>
-      </div>
-    </li>
-
-    <li class="step">
-      <span class="step-num" aria-hidden="true">04</span>
-      <div class="step-body">
-        <h3>Put prompts in one place</h3>
-        <p>Prompts were string literals scattered across the codebase. I moved them into a prompt editor with access controls and a byte-parity check, so an edited prompt produces exactly the bytes the code used to hard-code. Product people can change wording without an engineer and without silent regressions.</p>
-      </div>
-    </li>
-
-    <li class="step">
-      <span class="step-num" aria-hidden="true">05</span>
-      <div class="step-body">
-        <h3>Made the jobs visible</h3>
-        <p>The automations ran out of a single <code>cron.php</code>. I split it into separate jobs and built a UI to edit cron tasks, plus an overview page showing what runs, when, and what it costs.</p>
-      </div>
-    </li>
-
-    <li class="step">
-      <span class="step-num" aria-hidden="true">06</span>
-      <div class="step-body">
-        <h3>Deleted dead AI code</h3>
-        <p>Leftovers from earlier experiments were removed so the team has less to reason about.</p>
-      </div>
-    </li>
-
-  </ol>
-
-  <h2>Result</h2>
-  <ul class="outcomes">
-    <li>Roughly 60% lower cost on the highest-volume pipeline, with identical output.</li>
-    <li>Per-feature and per-model cost that matches the actual invoice.</li>
-    <li>Two expensive changes avoided on the strength of measurement.</li>
-    <li>Prompts, jobs and costs editable and visible in a UI instead of buried in code.</li>
-  </ul>
-
-  <section class="closing">
-    <h2>If you run LLMs in production</h2>
-    <p>The order matters: measure first, find the structural waste — caching, redundant reprocessing, fan-outs that skip the cache — fix it as merged pull requests, and only then look at model changes, with evals.</p>
-    <p>I do this as a fixed-price one-week audit, with an optional implementation sprint afterwards.</p>
+    </div>
   </section>
 
-  <div class="sig">
-    <span class="name">Teodor Velický</span>
-    <span>Applied AI Engineer · LLM cost optimization</span>
-    <a href="mailto:teodorvelicky@gmail.com">teodorvelicky@gmail.com</a>
-  </div>
+  <div class="divider"></div>
 
-</main>
+  <!-- ================= 02 ================= -->
+  <section id="s2">
+    <div class="sec-head">
+      <span class="sec-n">02</span>
+      <h2>One way of measuring, before changing anything else</h2>
+    </div>
+    <div class="sec-body">
+      <p>I went through every AI automation in the company and built a single measurement: Anthropic invoice data reconciled against per-call token counts times list pricing, broken down per workflow and per model. That gave the team a cost per feature — and it caught a cache-token accounting mismatch that had been inflating the bill.</p>
+
+      <figure>
+        <div class="fig-bar"><span class="fig-id">Fig. 2 — Reconciliation</span></div>
+        <div class="fig-canvas">
+          <svg viewBox="0 0 600 186" role="img" aria-label="Per-call token counts multiplied by list pricing are reconciled against the Anthropic invoice; the difference is a residual that exposed a cache-token accounting mismatch, and the reconciled figure is then split per workflow and per model.">
+            <defs>
+              <marker id="ar3" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M0 0.5 L7.5 4 L0 7.5 z" fill="currentColor"/>
+              </marker>
+              <marker id="ar4" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M0 0.5 L7.5 4 L0 7.5 z" fill="var(--accent)"/>
+              </marker>
+            </defs>
+
+            <text x="0" y="11" class="mono" font-size="10" fill="var(--faint)" letter-spacing="1.5">MEASURED</text>
+            <rect x="0" y="20" width="164" height="34" fill="none" stroke="currentColor" stroke-width="1"/>
+            <text x="10" y="34" class="mono" font-size="10.5" fill="var(--ink)">per-call token counts</text>
+            <text x="10" y="47" class="mono" font-size="10.5" fill="var(--muted)">× list pricing</text>
+
+            <text x="0" y="83" class="mono" font-size="10" fill="var(--faint)" letter-spacing="1.5">BILLED</text>
+            <rect x="0" y="92" width="164" height="34" fill="none" stroke="currentColor" stroke-width="1"/>
+            <text x="10" y="106" class="mono" font-size="10.5" fill="var(--ink)">Anthropic invoice</text>
+            <text x="10" y="119" class="mono" font-size="10.5" fill="var(--muted)">actual charge</text>
+
+            <path d="M164 37 H206 V70" stroke="currentColor" stroke-width="1.1" fill="none"/>
+            <path d="M164 109 H206 V76" stroke="currentColor" stroke-width="1.1" fill="none"/>
+            <path d="M206 70 V 73" stroke="currentColor" stroke-width="1.1" fill="none" marker-end="url(#ar3)"/>
+
+            <rect x="214" y="56" width="112" height="34" fill="var(--surface)" stroke="currentColor" stroke-width="1.2"/>
+            <text x="270" y="77" class="mono" font-size="11" fill="var(--ink)" text-anchor="middle">reconcile</text>
+
+            <path d="M270 90 V 116" stroke="var(--signal)" stroke-width="1.1" fill="none" marker-end="url(#ar3)" color="var(--signal)"/>
+            <rect x="196" y="120" width="188" height="30" fill="var(--signal-soft)" stroke="var(--signal)" stroke-width="1"/>
+            <text x="206" y="132" class="mono" font-size="10" fill="var(--signal)" letter-spacing="1.1">RESIDUAL ≠ 0</text>
+            <text x="206" y="145" class="mono" font-size="10" fill="var(--signal)">cache-token accounting mismatch</text>
+
+            <path d="M326 73 H370" stroke="var(--accent)" stroke-width="1.2" fill="none" marker-end="url(#ar4)"/>
+
+            <rect x="378" y="20" width="200" height="26" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width=".9"/>
+            <text x="388" y="37" class="mono" font-size="10.5" fill="var(--accent)">cost per workflow</text>
+            <rect x="378" y="52" width="200" height="26" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width=".9"/>
+            <text x="388" y="69" class="mono" font-size="10.5" fill="var(--accent)">cost per model</text>
+            <rect x="378" y="84" width="200" height="26" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width=".9"/>
+            <text x="388" y="101" class="mono" font-size="10.5" fill="var(--accent)">cost per feature</text>
+            <path d="M478 46 V 52 M478 78 V 84" stroke="var(--accent)" stroke-width="1" fill="none"/>
+
+            <text x="378" y="132" class="mono" font-size="10" fill="var(--muted)">the number a decision</text>
+            <text x="378" y="145" class="mono" font-size="10" fill="var(--muted)">can actually rest on</text>
+          </svg>
+        </div>
+        <figcaption>Two independent paths to the same number. The gap between them is the finding — a residual that is not zero is an accounting bug, not a rounding error.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- ================= 03 ================= -->
+  <section id="s3">
+    <div class="sec-head">
+      <span class="sec-n">03</span>
+      <h2>Two changes I recommended against</h2>
+    </div>
+    <div class="sec-body">
+      <p>With numbers in hand I evaluated the two things everyone reaches for first. For this workload the quality loss and the extra latency were not worth the savings. I recommended against both and wrote down the reasoning, so the decision can be reopened rather than re-argued.</p>
+
+      <div class="log">
+        <div class="log-item">
+          <div class="log-top">
+            <span class="log-name">Move workflows to a cheaper model</span>
+            <span class="pill">Not adopted</span>
+          </div>
+          <p>The saving was real but small against the measured baseline, and the quality drop on this workload was not acceptable for output that goes out under the company's name.</p>
+          <p class="revisit"><b>Revisit when:</b> the price gap between tiers widens, or an eval suite exists that can prove the cheaper model holds on this exact task.</p>
+        </div>
+        <div class="log-item">
+          <div class="log-top">
+            <span class="log-name">Cascade: cheap model first, strong model on low confidence</span>
+            <span class="pill">Not adopted</span>
+          </div>
+          <p>A cascade only pays if the cheap model handles most traffic confidently. Here the escalation rate meant paying for two calls often enough to erase the saving, while adding a second round-trip to every escalated request.</p>
+          <p class="revisit"><b>Revisit when:</b> traffic mix shifts toward easy cases, or list prices move enough to change the escalation break-even.</p>
+        </div>
+      </div>
+
+      <figure>
+        <div class="fig-bar"><span class="fig-id">Fig. 3 — Why the cascade did not pay</span></div>
+        <div class="fig-canvas">
+          <svg viewBox="0 0 600 158" role="img" aria-label="A cascade routes every request through a cheap model first; confident answers stop there, but low-confidence answers are re-sent to the strong model, so those requests pay for both calls and take two round trips.">
+            <defs>
+              <marker id="ar5" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M0 0.5 L7.5 4 L0 7.5 z" fill="currentColor"/>
+              </marker>
+              <marker id="ar6" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M0 0.5 L7.5 4 L0 7.5 z" fill="var(--signal)"/>
+              </marker>
+            </defs>
+
+            <rect x="0" y="52" width="86" height="30" fill="none" stroke="currentColor" stroke-width="1"/>
+            <text x="43" y="71" class="mono" font-size="10.5" fill="var(--ink)" text-anchor="middle">request</text>
+            <path d="M86 67 H122" stroke="currentColor" stroke-width="1.1" fill="none" marker-end="url(#ar5)"/>
+
+            <rect x="130" y="52" width="106" height="30" fill="none" stroke="currentColor" stroke-width="1.2"/>
+            <text x="183" y="71" class="mono" font-size="10.5" fill="var(--ink)" text-anchor="middle">cheap model</text>
+
+            <path d="M236 67 H272" stroke="currentColor" stroke-width="1.1" fill="none"/>
+            <path d="M272 67 V 26 M272 67 V 118" stroke="currentColor" stroke-width="1.1" fill="none"/>
+
+            <path d="M272 26 H310" stroke="var(--accent)" stroke-width="1.2" fill="none" marker-end="url(#ar4)"/>
+            <text x="278" y="20" class="mono" font-size="9.5" fill="var(--accent)">confident</text>
+            <rect x="318" y="12" width="126" height="28" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width=".9"/>
+            <text x="381" y="30" class="mono" font-size="10.5" fill="var(--accent)" text-anchor="middle">1 call · 1 hop</text>
+
+            <path d="M272 118 H310" stroke="var(--signal)" stroke-width="1.2" fill="none" marker-end="url(#ar6)"/>
+            <text x="278" y="112" class="mono" font-size="9.5" fill="var(--signal)">low confidence</text>
+            <rect x="318" y="104" width="126" height="28" fill="var(--signal-soft)" stroke="var(--signal)" stroke-width=".9"/>
+            <text x="381" y="122" class="mono" font-size="10.5" fill="var(--signal)" text-anchor="middle">strong model</text>
+
+            <path d="M444 118 H478" stroke="var(--signal)" stroke-width="1.2" fill="none" marker-end="url(#ar6)"/>
+            <rect x="486" y="104" width="114" height="28" fill="none" stroke="var(--signal)" stroke-width="1.2"/>
+            <text x="543" y="122" class="mono" font-size="10.5" fill="var(--signal)" text-anchor="middle">2 calls · 2 hops</text>
+
+            <text x="130" y="150" class="mono" font-size="10" fill="var(--muted)">Break-even needs the confident branch to carry nearly all traffic. Measured, it did not.</text>
+          </svg>
+        </div>
+        <figcaption>The escalated path pays twice and waits twice. On this traffic mix, that branch was frequent enough to cancel the saving on the cheap branch.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- ================= 04 ================= -->
+  <section id="s4">
+    <div class="sec-head">
+      <span class="sec-n">04</span>
+      <h2>Prompts out of the codebase, without silent regressions</h2>
+    </div>
+    <div class="sec-body">
+      <p>Prompts were string literals scattered across the codebase, so changing wording meant a developer, a branch and a deploy. I moved them into a prompt editor with access controls and a <strong>byte-parity check</strong>: an edited prompt has to produce exactly the bytes the code used to hard-code before it can go live. Product people can change wording without an engineer, and without a silent behaviour change nobody notices for a week.</p>
+
+      <figure>
+        <div class="fig-bar"><span class="fig-id">Fig. 4 — Prompt path</span></div>
+        <div class="fig-canvas">
+          <svg viewBox="0 0 600 168" role="img" aria-label="Before, prompt strings were hard-coded in several source files and changing one required a developer and a deploy. After, prompts live in one editor with access control, and a byte-parity gate compares the rendered prompt to the previously hard-coded bytes before the runtime uses it.">
+            <defs>
+              <marker id="ar7" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M0 0.5 L7.5 4 L0 7.5 z" fill="currentColor"/>
+              </marker>
+              <marker id="ar8" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M0 0.5 L7.5 4 L0 7.5 z" fill="var(--accent)"/>
+              </marker>
+            </defs>
+
+            <text x="0" y="11" class="mono" font-size="10" fill="var(--signal)" letter-spacing="1.5">BEFORE</text>
+            <rect x="0" y="20" width="120" height="20" fill="var(--signal-soft)" stroke="var(--signal)" stroke-width=".9"/>
+            <text x="8" y="34" class="mono" font-size="9.5" fill="var(--signal)">Mailer.php  "You are…"</text>
+            <rect x="0" y="44" width="120" height="20" fill="var(--signal-soft)" stroke="var(--signal)" stroke-width=".9"/>
+            <text x="8" y="58" class="mono" font-size="9.5" fill="var(--signal)">Cron.php    "You are…"</text>
+            <rect x="0" y="68" width="120" height="20" fill="var(--signal-soft)" stroke="var(--signal)" stroke-width=".9"/>
+            <text x="8" y="82" class="mono" font-size="9.5" fill="var(--signal)">Lead.php    "You are…"</text>
+            <text x="0" y="106" class="mono" font-size="9.5" fill="var(--muted)">edit = dev + branch + deploy</text>
+
+            <path d="M126 54 H166" stroke="currentColor" stroke-width="1.1" fill="none" marker-end="url(#ar7)"/>
+            <text x="128" y="47" class="mono" font-size="9.5" fill="var(--muted)">moved</text>
+
+            <text x="174" y="11" class="mono" font-size="10" fill="var(--accent)" letter-spacing="1.5">AFTER</text>
+            <rect x="174" y="20" width="140" height="68" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.2"/>
+            <text x="244" y="42" class="mono" font-size="11" font-weight="600" fill="var(--accent)" text-anchor="middle">prompt editor</text>
+            <text x="244" y="58" class="mono" font-size="9.5" fill="var(--accent)" text-anchor="middle">one source of truth</text>
+            <text x="244" y="74" class="mono" font-size="9.5" fill="var(--accent)" text-anchor="middle">access-controlled</text>
+            <text x="174" y="106" class="mono" font-size="9.5" fill="var(--muted)">edit = product person, no deploy</text>
+
+            <path d="M314 54 H352" stroke="var(--accent)" stroke-width="1.2" fill="none" marker-end="url(#ar8)"/>
+
+            <rect x="360" y="30" width="118" height="48" fill="none" stroke="currentColor" stroke-width="1.4"/>
+            <text x="419" y="49" class="mono" font-size="10.5" fill="var(--ink)" text-anchor="middle">byte-parity</text>
+            <text x="419" y="64" class="mono" font-size="10.5" fill="var(--ink)" text-anchor="middle">gate</text>
+
+            <path d="M478 54 H520" stroke="var(--accent)" stroke-width="1.2" fill="none" marker-end="url(#ar8)"/>
+            <rect x="528" y="38" width="72" height="32" fill="none" stroke="var(--accent)" stroke-width="1.2"/>
+            <text x="564" y="58" class="mono" font-size="10.5" fill="var(--accent)" text-anchor="middle">runtime</text>
+
+            <path d="M419 78 V 116" stroke="var(--signal)" stroke-width="1.1" fill="none" marker-end="url(#ar6)"/>
+            <text x="426" y="100" class="mono" font-size="9.5" fill="var(--signal)">bytes differ</text>
+            <rect x="330" y="120" width="178" height="26" fill="var(--signal-soft)" stroke="var(--signal)" stroke-width=".9"/>
+            <text x="419" y="137" class="mono" font-size="10" fill="var(--signal)" text-anchor="middle">blocked — flagged, not shipped</text>
+          </svg>
+        </div>
+        <figcaption>The gate is the point. Centralising prompts without a parity check just moves the risk somewhere less visible.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- ================= 05 ================= -->
+  <section id="s5">
+    <div class="sec-head">
+      <span class="sec-n">05</span>
+      <h2>Jobs and costs made visible</h2>
+    </div>
+    <div class="sec-body">
+      <p>The automations all ran out of a single <code>cron.php</code>. I split it into separate jobs and built a UI to edit cron tasks, plus an overview page showing what runs, when, and what it costs. Cost stopped being a monthly surprise and became a column next to the job that caused it.</p>
+
+      <figure>
+        <div class="fig-bar"><span class="fig-id">Fig. 5 — Scheduling and attribution</span></div>
+        <div class="fig-canvas">
+          <svg viewBox="0 0 600 164" role="img" aria-label="Before, one cron.php file ran every automation on one schedule with no per-job cost visibility. After, each automation is a separate job with its own schedule, edited through a UI, and each job's cost is attributed to it on an overview page.">
+            <defs>
+              <marker id="ar9" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M0 0.5 L7.5 4 L0 7.5 z" fill="currentColor"/>
+              </marker>
+            </defs>
+
+            <text x="0" y="11" class="mono" font-size="10" fill="var(--signal)" letter-spacing="1.5">BEFORE</text>
+            <rect x="0" y="20" width="132" height="76" fill="var(--signal-soft)" stroke="var(--signal)" stroke-width="1.2"/>
+            <text x="66" y="46" class="mono" font-size="11.5" font-weight="600" fill="var(--signal)" text-anchor="middle">cron.php</text>
+            <text x="66" y="63" class="mono" font-size="9.5" fill="var(--signal)" text-anchor="middle">everything, one file</text>
+            <text x="66" y="79" class="mono" font-size="9.5" fill="var(--signal)" text-anchor="middle">one schedule</text>
+            <text x="0" y="116" class="mono" font-size="9.5" fill="var(--muted)">cost: one line on an invoice</text>
+
+            <path d="M138 58 H178" stroke="currentColor" stroke-width="1.1" fill="none" marker-end="url(#ar9)"/>
+            <text x="140" y="51" class="mono" font-size="9.5" fill="var(--muted)">split</text>
+
+            <text x="186" y="11" class="mono" font-size="10" fill="var(--accent)" letter-spacing="1.5">AFTER</text>
+            <rect x="186" y="20" width="150" height="22" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width=".9"/>
+            <text x="194" y="35" class="mono" font-size="9.5" fill="var(--accent)">classify-inbound · */5</text>
+            <rect x="186" y="46" width="150" height="22" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width=".9"/>
+            <text x="194" y="61" class="mono" font-size="9.5" fill="var(--accent)">enrich-listing · hourly</text>
+            <rect x="186" y="72" width="150" height="22" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width=".9"/>
+            <text x="194" y="87" class="mono" font-size="9.5" fill="var(--accent)">digest-report · daily</text>
+            <text x="186" y="116" class="mono" font-size="9.5" fill="var(--muted)">schedules editable in a UI</text>
+
+            <path d="M336 31 H372 M336 57 H372 M336 83 H372" stroke="var(--accent)" stroke-width="1.1" fill="none"/>
+            <path d="M372 31 V 57 M372 57 V 83" stroke="var(--accent)" stroke-width="1.1" fill="none"/>
+            <path d="M372 57 H400" stroke="var(--accent)" stroke-width="1.2" fill="none" marker-end="url(#ar8)"/>
+
+            <rect x="408" y="20" width="192" height="76" fill="none" stroke="currentColor" stroke-width="1.4"/>
+            <text x="418" y="38" class="mono" font-size="10.5" font-weight="600" fill="var(--ink)">overview</text>
+            <path d="M408 44 H600" stroke="var(--rule)" stroke-width="1"/>
+            <text x="418" y="58" class="mono" font-size="9.5" fill="var(--muted)">job</text>
+            <text x="592" y="58" class="mono" font-size="9.5" fill="var(--muted)" text-anchor="end">cost</text>
+            <text x="418" y="74" class="mono" font-size="9.5" fill="var(--ink-soft)">classify-inbound</text>
+            <text x="592" y="74" class="mono" font-size="9.5" fill="var(--accent)" text-anchor="end">largest</text>
+            <text x="418" y="90" class="mono" font-size="9.5" fill="var(--ink-soft)">enrich-listing</text>
+            <text x="592" y="90" class="mono" font-size="9.5" fill="var(--muted)" text-anchor="end">·</text>
+            <text x="408" y="116" class="mono" font-size="9.5" fill="var(--muted)">cost attributed to the job that caused it</text>
+          </svg>
+        </div>
+        <figcaption>Splitting the file is what makes attribution possible. Until each job is separately schedulable, per-job cost is not a number that exists.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- ================= 06 ================= -->
+  <section id="s6">
+    <div class="sec-head">
+      <span class="sec-n">06</span>
+      <h2>Dead AI code removed</h2>
+    </div>
+    <div class="sec-body">
+      <p>Leftovers from earlier experiments were deleted, so the team has less to reason about the next time someone asks what the AI stack actually does.</p>
+
+      <h3 style="margin-top:2rem">What the engagement left behind</h3>
+      <ul class="outcomes">
+        <li>Roughly 60% lower cost on the highest-volume pipeline, with identical output.</li>
+        <li>Per-feature and per-model cost that reconciles against the actual invoice.</li>
+        <li>Two expensive changes avoided on the strength of measurement, with the reasoning written down.</li>
+        <li>Prompts, jobs and costs editable and visible in a UI instead of buried in code.</li>
+      </ul>
+    </div>
+  </section>
+
+  <div class="divider"></div>
+
+  <!-- ================= 07 ================= -->
+  <section id="s7">
+    <div class="sec-head">
+      <span class="sec-n">07</span>
+      <h2>If you run LLMs in production, the order matters</h2>
+    </div>
+    <div class="sec-body">
+      <p>Most cost conversations start at the last step — which model, which tier — because that is the step with a price list attached. It is the step with the least leverage and the most risk to quality. Structural waste is cheaper to remove and costs nothing in output.</p>
+
+      <figure>
+        <div class="fig-bar"><span class="fig-id">Fig. 6 — Order of work</span></div>
+        <div class="fig-canvas">
+          <svg viewBox="0 0 600 132" role="img" aria-label="The recommended sequence: measure, then remove structural waste such as caching, redundant reprocessing and fan-outs that skip the cache, then ship the fixes as merged pull requests, and only then consider model changes, which must pass an eval gate before adoption.">
+            <defs>
+              <marker id="ar10" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                <path d="M0 0.5 L7.5 4 L0 7.5 z" fill="var(--accent)"/>
+              </marker>
+            </defs>
+
+            <rect x="0" y="30" width="118" height="40" fill="var(--accent)"/>
+            <text x="59" y="48" class="mono" font-size="10" fill="var(--surface)" text-anchor="middle" letter-spacing="1.1">STEP 1</text>
+            <text x="59" y="62" class="mono" font-size="11" font-weight="600" fill="var(--surface)" text-anchor="middle">measure</text>
+            <path d="M118 50 H144" stroke="var(--accent)" stroke-width="1.3" fill="none" marker-end="url(#ar10)"/>
+
+            <rect x="152" y="30" width="140" height="40" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.2"/>
+            <text x="222" y="48" class="mono" font-size="10" fill="var(--accent)" text-anchor="middle" letter-spacing="1.1">STEP 2</text>
+            <text x="222" y="62" class="mono" font-size="11" font-weight="600" fill="var(--accent)" text-anchor="middle">structural waste</text>
+            <path d="M292 50 H318" stroke="var(--accent)" stroke-width="1.3" fill="none" marker-end="url(#ar10)"/>
+
+            <rect x="326" y="30" width="118" height="40" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.2"/>
+            <text x="385" y="48" class="mono" font-size="10" fill="var(--accent)" text-anchor="middle" letter-spacing="1.1">STEP 3</text>
+            <text x="385" y="62" class="mono" font-size="11" font-weight="600" fill="var(--accent)" text-anchor="middle">merged PRs</text>
+            <path d="M444 50 H470" stroke="var(--accent)" stroke-width="1.3" fill="none" marker-end="url(#ar10)"/>
+
+            <rect x="478" y="30" width="122" height="40" fill="none" stroke="currentColor" stroke-width="1.3" stroke-dasharray="4 3"/>
+            <text x="539" y="48" class="mono" font-size="10" fill="var(--muted)" text-anchor="middle" letter-spacing="1.1">STEP 4</text>
+            <text x="539" y="62" class="mono" font-size="11" fill="var(--ink)" text-anchor="middle">model changes</text>
+            <text x="478" y="86" class="mono" font-size="9.5" fill="var(--muted)">only behind an eval gate</text>
+
+            <text x="152" y="92" class="mono" font-size="9.5" fill="var(--muted)">caching · redundant reprocessing</text>
+            <text x="152" y="105" class="mono" font-size="9.5" fill="var(--muted)">fan-outs that skip the cache</text>
+
+            <text x="0" y="92" class="mono" font-size="9.5" fill="var(--muted)">invoice ↔ tokens</text>
+            <text x="0" y="105" class="mono" font-size="9.5" fill="var(--muted)">per workflow</text>
+
+            <text x="326" y="92" class="mono" font-size="9.5" fill="var(--muted)">shipped, not</text>
+            <text x="326" y="105" class="mono" font-size="9.5" fill="var(--muted)">recommended</text>
+          </svg>
+        </div>
+        <figcaption>Steps 1 to 3 are safe: the output does not change. Step 4 is the only one that can cost quality, which is why it comes last and behind evals.</figcaption>
+      </figure>
+
+      <div class="closing">
+        <h3>How I work with teams on this</h3>
+        <p>A fixed-price one-week audit: every AI workflow measured against the invoice, structural waste identified and quantified, and a written recommendation on what to change and what to leave alone. An implementation sprint afterwards is optional — the audit stands on its own, and the fixes ship as reviewed pull requests in your codebase, not as a slide deck.</p>
+      </div>
+
+      <div class="sig">
+        <span class="who">Teodor Velický</span>
+        <span>Applied AI Engineer · LLM cost optimization</span>
+        <a href="mailto:teodorvelicky@gmail.com">teodorvelicky@gmail.com</a>
+      </div>
+    </div>
+  </section>
+
+</div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---------- Fig. 1 before/after toggle ---------- */
+  var gB=document.getElementById('gBefore'),gA=document.getElementById('gAfter'),
+      bB=document.getElementById('btnBefore'),bA=document.getElementById('btnAfter'),
+      cap=document.getElementById('figCap'),
+      roState=document.getElementById('roState'),roTok=document.getElementById('roTok'),roDelta=document.getElementById('roDelta');
+
+  var CAP_A="The prefix is written once and read back seven times. Only the write pays more than list price; every read costs a tenth.";
+  var CAP_B="Eight calls, eight full-price copies of the same 5,000-token prefix — plus a reprocess flag re-running mail that was already classified.";
+
+  function setState(after){
+    gB.setAttribute('display', after ? 'none' : 'inline');
+    gA.setAttribute('display', after ? 'inline' : 'none');
+    bB.setAttribute('aria-pressed', String(!after));
+    bA.setAttribute('aria-pressed', String(after));
+    cap.textContent = after ? CAP_A : CAP_B;
+    roState.textContent = after ? 'After' : 'Before';
+    roTok.textContent = after ? '19,350' : '49,600';
+    roDelta.textContent = after ? '−61.0%' : 'baseline';
+  }
+  bB.addEventListener('click',function(){setState(false);});
+  bA.addEventListener('click',function(){setState(true);});
+  setState(true);
+
+  /* ---------- cost model ---------- */
+  var READ=0.1, write=1.25;
+  var el={N:document.getElementById('fN'),S:document.getElementById('fS'),U:document.getElementById('fU'),
+          R:document.getElementById('fR'),P:document.getElementById('fP')};
+  var t5=document.getElementById('ttl5'),t60=document.getElementById('ttl60');
+  var obar=document.getElementById('obar'),abar=document.getElementById('abar'),
+      oNaive=document.getElementById('oNaive'),oPrimed=document.getElementById('oPrimed'),
+      oPct=document.getElementById('oPct'),oNote=document.getElementById('oNote');
+
+  function num(input,min,max,fallback){
+    var v=parseFloat(input.value);
+    if(!isFinite(v)) v=fallback;
+    if(v<min) v=min;
+    if(v>max) v=max;
+    return v;
+  }
+  function money(x){
+    if(x>=1000) return '$'+Math.round(x).toLocaleString('en-US');
+    if(x>=10) return '$'+x.toFixed(0);
+    return '$'+x.toFixed(2);
+  }
+
+  function recalc(){
+    var N=Math.round(num(el.N,1,200,8)),
+        S=num(el.S,0,2000000,5000),
+        U=num(el.U,0,2000000,1200),
+        R=num(el.R,0,10000000,2000),
+        P=num(el.P,0,1000,3);
+
+    var naiveTok = N*(S+U);
+    var primedTok = write*S + (N-1)*READ*S + N*U;
+
+    var per=1e-6*P*30*R;
+    var naive=naiveTok*per, primed=primedTok*per;
+
+    var pct = naiveTok>0 ? (1-primedTok/naiveTok)*100 : 0;
+    var worth = primedTok < naiveTok;
+
+    obar.style.width='100%';
+    abar.style.width = (naiveTok>0 ? Math.max(2,Math.min(100,primedTok/naiveTok*100)) : 100)+'%';
+
+    oNaive.textContent = money(naive)+' / mo';
+    oPrimed.textContent = money(primed)+' / mo';
+
+    var sign = pct>=0 ? '−' : '+';
+    oPct.textContent = sign+Math.abs(pct).toFixed(1)+'%';
+    oPct.style.color = worth ? 'var(--accent)' : 'var(--signal)';
+
+    var breakeven = Math.max(2, Math.floor((write-READ)/(1-READ))+1);
+    var saved = naive-primed;
+
+    if(!worth){
+      oNote.innerHTML = 'Caching costs more here — the write is not amortised. Needs <b>'+breakeven+'</b> or more calls per request to pay for itself.';
+    }else if(S===0){
+      oNote.innerHTML = 'Nothing is shared between calls, so there is nothing to cache. The win is in the prefix.';
+    }else{
+      oNote.innerHTML = 'Saves <b>'+money(saved)+'</b> a month on input tokens. Break-even at <b>'+breakeven+'</b> or more calls per request.';
+    }
+  }
+
+  Object.keys(el).forEach(function(k){
+    el[k].addEventListener('input',recalc);
+    el[k].addEventListener('change',recalc);
+  });
+  t5.addEventListener('click',function(){write=1.25;t5.setAttribute('aria-pressed','true');t60.setAttribute('aria-pressed','false');recalc();});
+  t60.addEventListener('click',function(){write=2.0;t60.setAttribute('aria-pressed','true');t5.setAttribute('aria-pressed','false');recalc();});
+  recalc();
+
+  /* ---------- section rail scroll-spy ---------- */
+  var links=[].slice.call(document.querySelectorAll('.rail a'));
+  var secs=links.map(function(a){return document.querySelector(a.getAttribute('href'));}).filter(Boolean);
+  if('IntersectionObserver' in window && secs.length){
+    var io=new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if(!e.isIntersecting) return;
+        links.forEach(function(a){
+          a.classList.toggle('on', a.getAttribute('href')==='#'+e.target.id);
+        });
+      });
+    },{rootMargin:'-15% 0px -70% 0px',threshold:0});
+    secs.forEach(function(s){io.observe(s);});
+  }
+})();
+</script>
 </body>
 </html>
