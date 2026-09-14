@@ -356,7 +356,7 @@ figcaption{
     <div class="result">
       <div class="result-top">
         <div class="big">~60%</div>
-        <p class="big-cap">lower cost on the highest-volume pipeline — an email classifier running on every inbound message — with identical output.</p>
+        <p class="big-cap">lower cost on the highest-volume pipeline: an email classifier that runs on every inbound message. Output unchanged.</p>
       </div>
       <div class="bars">
         <div class="bar-row">
@@ -385,7 +385,7 @@ figcaption{
 
       <figure>
         <div class="fig-bar">
-          <span class="fig-id">Fig. 1 — Request shape</span>
+          <span class="fig-id">Fig. 1 / Request shape</span>
           <div class="seg" role="group" aria-label="Show pipeline before or after the change">
             <button type="button" id="btnBefore" aria-pressed="false">Before</button>
             <button type="button" id="btnAfter" aria-pressed="true">After</button>
@@ -496,7 +496,7 @@ figcaption{
           <div class="field">
             <label for="fS">Shared prefix tokens</label>
             <input type="number" id="fS" value="5000" min="0" max="2000000" step="100">
-            <span class="hint">System prompt, instructions, few-shot — identical across calls.</span>
+            <span class="hint">System prompt, instructions, few-shot. Identical across calls.</span>
           </div>
           <div class="field">
             <label for="fU">Unique tokens per call</label>
@@ -539,7 +539,7 @@ figcaption{
             <span class="verdict-note" id="oNote">Saves <b>$5,445</b> a month on input tokens. Break-even at <b>2</b> or more calls per request.</span>
           </div>
         </div>
-        <p class="calc-foot">Input tokens only — output is unchanged by caching and is excluded. Multipliers are Anthropic's published prompt-cache rates: write ×1.25 (5 min) or ×2.0 (1 hr), read ×0.1. Month = 30 days. Defaults are the shape of the pipeline in this engagement.</p>
+        <p class="calc-foot">Input tokens only. Caching does not change output, so output is excluded. Multipliers are Anthropic's published prompt-cache rates: write ×1.25 (5 min) or ×2.0 (1 hr), read ×0.1. Month = 30 days. Defaults are the shape of the pipeline in this engagement.</p>
       </div>
     </div>
   </section>
@@ -553,10 +553,10 @@ figcaption{
       <h2>One way of measuring, before changing anything else</h2>
     </div>
     <div class="sec-body">
-      <p>I went through every AI automation in the company and built a single measurement: Anthropic invoice data reconciled against per-call token counts times list pricing, broken down per workflow and per model. That gave the team a cost per feature — and it caught a cache-token accounting mismatch that had been inflating the bill.</p>
+      <p>I went through every AI automation in the company and built a single measurement: Anthropic invoice data reconciled against per-call token counts times list pricing, broken down per workflow and per model. That gave the team a cost per feature, and it caught a cache-token accounting mismatch that had been inflating the bill.</p>
 
       <figure>
-        <div class="fig-bar"><span class="fig-id">Fig. 2 — Reconciliation</span></div>
+        <div class="fig-bar"><span class="fig-id">Fig. 2 / Reconciliation</span></div>
         <div class="fig-canvas">
           <svg viewBox="0 0 600 186" role="img" aria-label="Per-call token counts multiplied by list pricing are reconciled against the Anthropic invoice; the difference is a residual that exposed a cache-token accounting mismatch, and the reconciled figure is then split per workflow and per model.">
             <defs>
@@ -586,7 +586,7 @@ figcaption{
             <text x="270" y="77" class="mono" font-size="11" fill="var(--ink)" text-anchor="middle">reconcile</text>
 
             <path d="M270 90 V 116" stroke="var(--signal)" stroke-width="1.1" fill="none" marker-end="url(#ar3)" color="var(--signal)"/>
-            <rect x="196" y="120" width="188" height="30" fill="var(--signal-soft)" stroke="var(--signal)" stroke-width="1"/>
+            <rect x="196" y="120" width="204" height="30" fill="var(--signal-soft)" stroke="var(--signal)" stroke-width="1"/>
             <text x="206" y="132" class="mono" font-size="10" fill="var(--signal)" letter-spacing="1.1">RESIDUAL ≠ 0</text>
             <text x="206" y="145" class="mono" font-size="10" fill="var(--signal)">cache-token accounting mismatch</text>
 
@@ -600,11 +600,9 @@ figcaption{
             <text x="388" y="101" class="mono" font-size="10.5" fill="var(--accent)">cost per feature</text>
             <path d="M478 46 V 52 M478 78 V 84" stroke="var(--accent)" stroke-width="1" fill="none"/>
 
-            <text x="378" y="132" class="mono" font-size="10" fill="var(--muted)">the number a decision</text>
-            <text x="378" y="145" class="mono" font-size="10" fill="var(--muted)">can actually rest on</text>
           </svg>
         </div>
-        <figcaption>Two independent paths to the same number. The gap between them is the finding — a residual that is not zero is an accounting bug, not a rounding error.</figcaption>
+        <figcaption>Two independent paths to the same number. The gap between them is the finding. A residual that is not zero is an accounting bug, not a rounding error.</figcaption>
       </figure>
     </div>
   </section>
@@ -640,9 +638,9 @@ figcaption{
       </div>
 
       <figure>
-        <div class="fig-bar"><span class="fig-id">Fig. 3 — Why the cascade did not pay</span></div>
+        <div class="fig-bar"><span class="fig-id">Fig. 3 / Why the cascade did not pay</span></div>
         <div class="fig-canvas">
-          <svg viewBox="0 0 600 158" role="img" aria-label="A cascade routes every request through a cheap model first; confident answers stop there, but low-confidence answers are re-sent to the strong model, so those requests pay for both calls and take two round trips.">
+          <svg viewBox="0 0 600 172" role="img" aria-label="A cascade routes every request through a cheap model first; confident answers stop there, but low-confidence answers are re-sent to the strong model, so those requests pay for both calls and take two round trips.">
             <defs>
               <marker id="ar5" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
                 <path d="M0 0.5 L7.5 4 L0 7.5 z" fill="currentColor"/>
@@ -660,26 +658,27 @@ figcaption{
             <text x="183" y="71" class="mono" font-size="10.5" fill="var(--ink)" text-anchor="middle">cheap model</text>
 
             <path d="M236 67 H272" stroke="currentColor" stroke-width="1.1" fill="none"/>
-            <path d="M272 67 V 26 M272 67 V 118" stroke="currentColor" stroke-width="1.1" fill="none"/>
+            <path d="M272 26 V 118" stroke="currentColor" stroke-width="1.1" fill="none"/>
 
-            <path d="M272 26 H310" stroke="var(--accent)" stroke-width="1.2" fill="none" marker-end="url(#ar4)"/>
-            <text x="278" y="20" class="mono" font-size="9.5" fill="var(--accent)">confident</text>
-            <rect x="318" y="12" width="126" height="28" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width=".9"/>
-            <text x="381" y="30" class="mono" font-size="10.5" fill="var(--accent)" text-anchor="middle">1 call · 1 hop</text>
+            <path d="M272 26 H320" stroke="var(--accent)" stroke-width="1.2" fill="none" marker-end="url(#ar4)"/>
+            <text x="274" y="20" class="mono" font-size="9" fill="var(--accent)">confident</text>
+            <rect x="328" y="12" width="132" height="28" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width=".9"/>
+            <text x="394" y="30" class="mono" font-size="10.5" fill="var(--accent)" text-anchor="middle">1 call · 1 hop</text>
 
-            <path d="M272 118 H310" stroke="var(--signal)" stroke-width="1.2" fill="none" marker-end="url(#ar6)"/>
-            <text x="278" y="112" class="mono" font-size="9.5" fill="var(--signal)">low confidence</text>
-            <rect x="318" y="104" width="126" height="28" fill="var(--signal-soft)" stroke="var(--signal)" stroke-width=".9"/>
-            <text x="381" y="122" class="mono" font-size="10.5" fill="var(--signal)" text-anchor="middle">strong model</text>
+            <path d="M272 118 H320" stroke="var(--signal)" stroke-width="1.2" fill="none" marker-end="url(#ar6)"/>
+            <text x="274" y="112" class="mono" font-size="9" fill="var(--signal)">escalates</text>
+            <rect x="328" y="104" width="104" height="28" fill="var(--signal-soft)" stroke="var(--signal)" stroke-width=".9"/>
+            <text x="380" y="122" class="mono" font-size="10.5" fill="var(--signal)" text-anchor="middle">strong model</text>
 
-            <path d="M444 118 H478" stroke="var(--signal)" stroke-width="1.2" fill="none" marker-end="url(#ar6)"/>
-            <rect x="486" y="104" width="114" height="28" fill="none" stroke="var(--signal)" stroke-width="1.2"/>
-            <text x="543" y="122" class="mono" font-size="10.5" fill="var(--signal)" text-anchor="middle">2 calls · 2 hops</text>
+            <path d="M432 118 H460" stroke="var(--signal)" stroke-width="1.2" fill="none" marker-end="url(#ar6)"/>
+            <rect x="468" y="104" width="132" height="28" fill="none" stroke="var(--signal)" stroke-width="1.2"/>
+            <text x="534" y="122" class="mono" font-size="10.5" fill="var(--signal)" text-anchor="middle">2 calls · 2 hops</text>
 
-            <text x="130" y="150" class="mono" font-size="10" fill="var(--muted)">Break-even needs the confident branch to carry nearly all traffic. Measured, it did not.</text>
+            <text x="130" y="152" class="mono" font-size="10" fill="var(--muted)">The cheap branch has to carry nearly all traffic.</text>
+            <text x="130" y="165" class="mono" font-size="10" fill="var(--muted)">On this workload it did not.</text>
           </svg>
         </div>
-        <figcaption>The escalated path pays twice and waits twice. On this traffic mix, that branch was frequent enough to cancel the saving on the cheap branch.</figcaption>
+        <figcaption>The escalated path pays twice and waits twice. On this traffic mix that branch came up often enough to cancel the saving on the cheap one.</figcaption>
       </figure>
     </div>
   </section>
@@ -693,12 +692,12 @@ figcaption{
       <h2>Prompts out of the codebase, without silent regressions</h2>
     </div>
     <div class="sec-body">
-      <p>Prompts were string literals scattered across the codebase, so changing wording meant a developer, a branch and a deploy. I moved them into a prompt editor with access controls and a <strong>byte-parity check</strong>: an edited prompt has to produce exactly the bytes the code used to hard-code before it can go live. Product people can change wording without an engineer, and without a silent behaviour change nobody notices for a week.</p>
+      <p>Prompts were string literals scattered across the codebase, so changing wording meant a developer, a branch and a deploy. I moved them into a prompt editor with access controls and a <strong>byte-parity check</strong>: an edited prompt has to produce exactly the bytes the code used to hard-code before it can go live. Product people can change wording without an engineer and without a silent behavior change that nobody notices for a week.</p>
 
       <figure>
-        <div class="fig-bar"><span class="fig-id">Fig. 4 — Prompt path</span></div>
+        <div class="fig-bar"><span class="fig-id">Fig. 4 / Prompt path</span></div>
         <div class="fig-canvas">
-          <svg viewBox="0 0 600 168" role="img" aria-label="Before, prompt strings were hard-coded in several source files and changing one required a developer and a deploy. After, prompts live in one editor with access control, and a byte-parity gate compares the rendered prompt to the previously hard-coded bytes before the runtime uses it.">
+          <svg viewBox="0 0 600 160" role="img" aria-label="Before, prompt strings were hard-coded in several source files and changing one required a developer and a deploy. After, prompts live in one editor with access control, and a byte-parity gate compares the rendered prompt to the previously hard-coded bytes before the runtime uses it.">
             <defs>
               <marker id="ar7" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
                 <path d="M0 0.5 L7.5 4 L0 7.5 z" fill="currentColor"/>
@@ -709,41 +708,41 @@ figcaption{
             </defs>
 
             <text x="0" y="11" class="mono" font-size="10" fill="var(--signal)" letter-spacing="1.5">BEFORE</text>
-            <rect x="0" y="20" width="120" height="20" fill="var(--signal-soft)" stroke="var(--signal)" stroke-width=".9"/>
-            <text x="8" y="34" class="mono" font-size="9.5" fill="var(--signal)">Mailer.php  "You are…"</text>
-            <rect x="0" y="44" width="120" height="20" fill="var(--signal-soft)" stroke="var(--signal)" stroke-width=".9"/>
-            <text x="8" y="58" class="mono" font-size="9.5" fill="var(--signal)">Cron.php    "You are…"</text>
-            <rect x="0" y="68" width="120" height="20" fill="var(--signal-soft)" stroke="var(--signal)" stroke-width=".9"/>
-            <text x="8" y="82" class="mono" font-size="9.5" fill="var(--signal)">Lead.php    "You are…"</text>
-            <text x="0" y="106" class="mono" font-size="9.5" fill="var(--muted)">edit = dev + branch + deploy</text>
+            <rect x="0" y="20" width="146" height="20" fill="var(--signal-soft)" stroke="var(--signal)" stroke-width=".9"/>
+            <text x="7" y="34" class="mono" font-size="9" fill="var(--signal)">Mailer.php  "You are…"</text>
+            <rect x="0" y="44" width="146" height="20" fill="var(--signal-soft)" stroke="var(--signal)" stroke-width=".9"/>
+            <text x="7" y="58" class="mono" font-size="9" fill="var(--signal)">Cron.php    "You are…"</text>
+            <rect x="0" y="68" width="146" height="20" fill="var(--signal-soft)" stroke="var(--signal)" stroke-width=".9"/>
+            <text x="7" y="82" class="mono" font-size="9" fill="var(--signal)">Lead.php    "You are…"</text>
+            <text x="0" y="105" class="mono" font-size="9" fill="var(--muted)">edit = dev, branch, deploy</text>
 
-            <path d="M126 54 H166" stroke="currentColor" stroke-width="1.1" fill="none" marker-end="url(#ar7)"/>
-            <text x="128" y="47" class="mono" font-size="9.5" fill="var(--muted)">moved</text>
+            <path d="M152 54 H180" stroke="currentColor" stroke-width="1.1" fill="none" marker-end="url(#ar7)"/>
+            <text x="152" y="47" class="mono" font-size="9" fill="var(--muted)">moved</text>
 
-            <text x="174" y="11" class="mono" font-size="10" fill="var(--accent)" letter-spacing="1.5">AFTER</text>
-            <rect x="174" y="20" width="140" height="68" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.2"/>
-            <text x="244" y="42" class="mono" font-size="11" font-weight="600" fill="var(--accent)" text-anchor="middle">prompt editor</text>
-            <text x="244" y="58" class="mono" font-size="9.5" fill="var(--accent)" text-anchor="middle">one source of truth</text>
-            <text x="244" y="74" class="mono" font-size="9.5" fill="var(--accent)" text-anchor="middle">access-controlled</text>
-            <text x="174" y="106" class="mono" font-size="9.5" fill="var(--muted)">edit = product person, no deploy</text>
+            <text x="188" y="11" class="mono" font-size="10" fill="var(--accent)" letter-spacing="1.5">AFTER</text>
+            <rect x="188" y="20" width="140" height="68" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.2"/>
+            <text x="258" y="42" class="mono" font-size="10.5" font-weight="600" fill="var(--accent)" text-anchor="middle">prompt editor</text>
+            <text x="258" y="58" class="mono" font-size="9" fill="var(--accent)" text-anchor="middle">one source of truth</text>
+            <text x="258" y="74" class="mono" font-size="9" fill="var(--accent)" text-anchor="middle">access-controlled</text>
+            <text x="188" y="105" class="mono" font-size="9" fill="var(--muted)">edit = product person, no deploy</text>
 
-            <path d="M314 54 H352" stroke="var(--accent)" stroke-width="1.2" fill="none" marker-end="url(#ar8)"/>
+            <path d="M328 54 H356" stroke="var(--accent)" stroke-width="1.2" fill="none" marker-end="url(#ar8)"/>
 
-            <rect x="360" y="30" width="118" height="48" fill="none" stroke="currentColor" stroke-width="1.4"/>
-            <text x="419" y="49" class="mono" font-size="10.5" fill="var(--ink)" text-anchor="middle">byte-parity</text>
-            <text x="419" y="64" class="mono" font-size="10.5" fill="var(--ink)" text-anchor="middle">gate</text>
+            <rect x="364" y="30" width="112" height="48" fill="none" stroke="currentColor" stroke-width="1.4"/>
+            <text x="420" y="49" class="mono" font-size="10" fill="var(--ink)" text-anchor="middle">byte-parity</text>
+            <text x="420" y="63" class="mono" font-size="10" fill="var(--ink)" text-anchor="middle">gate</text>
 
-            <path d="M478 54 H520" stroke="var(--accent)" stroke-width="1.2" fill="none" marker-end="url(#ar8)"/>
-            <rect x="528" y="38" width="72" height="32" fill="none" stroke="var(--accent)" stroke-width="1.2"/>
-            <text x="564" y="58" class="mono" font-size="10.5" fill="var(--accent)" text-anchor="middle">runtime</text>
+            <path d="M476 54 H504" stroke="var(--accent)" stroke-width="1.2" fill="none" marker-end="url(#ar8)"/>
+            <rect x="512" y="38" width="80" height="32" fill="none" stroke="var(--accent)" stroke-width="1.2"/>
+            <text x="552" y="58" class="mono" font-size="10" fill="var(--accent)" text-anchor="middle">runtime</text>
 
-            <path d="M419 78 V 116" stroke="var(--signal)" stroke-width="1.1" fill="none" marker-end="url(#ar6)"/>
-            <text x="426" y="100" class="mono" font-size="9.5" fill="var(--signal)">bytes differ</text>
-            <rect x="330" y="120" width="178" height="26" fill="var(--signal-soft)" stroke="var(--signal)" stroke-width=".9"/>
-            <text x="419" y="137" class="mono" font-size="10" fill="var(--signal)" text-anchor="middle">blocked — flagged, not shipped</text>
+            <path d="M420 78 V 118" stroke="var(--signal)" stroke-width="1.1" fill="none" marker-end="url(#ar6)"/>
+            <text x="427" y="100" class="mono" font-size="9" fill="var(--signal)">bytes differ</text>
+            <rect x="325" y="122" width="190" height="26" fill="var(--signal-soft)" stroke="var(--signal)" stroke-width=".9"/>
+            <text x="420" y="139" class="mono" font-size="9.5" fill="var(--signal)" text-anchor="middle">blocked: flagged, not shipped</text>
           </svg>
         </div>
-        <figcaption>The gate is the point. Centralising prompts without a parity check just moves the risk somewhere less visible.</figcaption>
+        <figcaption>The gate matters as much as the editor. Moving prompts into a UI without a parity check only hides the risk somewhere less visible.</figcaption>
       </figure>
     </div>
   </section>
@@ -757,10 +756,10 @@ figcaption{
       <h2>Jobs and costs made visible</h2>
     </div>
     <div class="sec-body">
-      <p>The automations all ran out of a single <code>cron.php</code>. I split it into separate jobs and built a UI to edit cron tasks, plus an overview page showing what runs, when, and what it costs. Cost stopped being a monthly surprise and became a column next to the job that caused it.</p>
+      <p>The automations all ran out of a single <code>cron.php</code>. I split it into separate jobs and built a UI to edit cron tasks, plus an overview page showing what runs, when, and what it costs. Cost is now a column next to the job that caused it instead of one line on a monthly invoice.</p>
 
       <figure>
-        <div class="fig-bar"><span class="fig-id">Fig. 5 — Scheduling and attribution</span></div>
+        <div class="fig-bar"><span class="fig-id">Fig. 5 / Scheduling and attribution</span></div>
         <div class="fig-canvas">
           <svg viewBox="0 0 600 164" role="img" aria-label="Before, one cron.php file ran every automation on one schedule with no per-job cost visibility. After, each automation is a separate job with its own schedule, edited through a UI, and each job's cost is attributed to it on an overview page.">
             <defs>
@@ -801,10 +800,10 @@ figcaption{
             <text x="592" y="74" class="mono" font-size="9.5" fill="var(--accent)" text-anchor="end">largest</text>
             <text x="418" y="90" class="mono" font-size="9.5" fill="var(--ink-soft)">enrich-listing</text>
             <text x="592" y="90" class="mono" font-size="9.5" fill="var(--muted)" text-anchor="end">·</text>
-            <text x="408" y="116" class="mono" font-size="9.5" fill="var(--muted)">cost attributed to the job that caused it</text>
+            <text x="408" y="116" class="mono" font-size="9.5" fill="var(--muted)">cost attributed per job</text>
           </svg>
         </div>
-        <figcaption>Splitting the file is what makes attribution possible. Until each job is separately schedulable, per-job cost is not a number that exists.</figcaption>
+        <figcaption>Attribution needs the split first. While every automation runs out of one file, there is no per-job cost to report.</figcaption>
       </figure>
     </div>
   </section>
@@ -839,10 +838,10 @@ figcaption{
       <h2>If you run LLMs in production, the order matters</h2>
     </div>
     <div class="sec-body">
-      <p>Most cost conversations start at the last step — which model, which tier — because that is the step with a price list attached. It is the step with the least leverage and the most risk to quality. Structural waste is cheaper to remove and costs nothing in output.</p>
+      <p>Most cost conversations start at the last step, which model and which tier, because that is the step with a price list attached. It also has the least leverage and the most risk to output quality. Structural waste is cheaper to remove and costs nothing in output.</p>
 
       <figure>
-        <div class="fig-bar"><span class="fig-id">Fig. 6 — Order of work</span></div>
+        <div class="fig-bar"><span class="fig-id">Fig. 6 / Order of work</span></div>
         <div class="fig-canvas">
           <svg viewBox="0 0 600 132" role="img" aria-label="The recommended sequence: measure, then remove structural waste such as caching, redundant reprocessing and fan-outs that skip the cache, then ship the fixes as merged pull requests, and only then consider model changes, which must pass an eval gate before adoption.">
             <defs>
@@ -851,42 +850,46 @@ figcaption{
               </marker>
             </defs>
 
-            <rect x="0" y="30" width="118" height="40" fill="var(--accent)"/>
-            <text x="59" y="48" class="mono" font-size="10" fill="var(--surface)" text-anchor="middle" letter-spacing="1.1">STEP 1</text>
-            <text x="59" y="62" class="mono" font-size="11" font-weight="600" fill="var(--surface)" text-anchor="middle">measure</text>
-            <path d="M118 50 H144" stroke="var(--accent)" stroke-width="1.3" fill="none" marker-end="url(#ar10)"/>
+            <rect x="0" y="22" width="118" height="40" fill="var(--accent)"/>
+            <text x="59" y="40" class="mono" font-size="9.5" fill="var(--surface)" text-anchor="middle" letter-spacing="1.1">STEP 1</text>
+            <text x="59" y="54" class="mono" font-size="10.5" font-weight="600" fill="var(--surface)" text-anchor="middle">measure</text>
+            <path d="M118 42 H144" stroke="var(--accent)" stroke-width="1.3" fill="none" marker-end="url(#ar10)"/>
 
-            <rect x="152" y="30" width="140" height="40" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.2"/>
-            <text x="222" y="48" class="mono" font-size="10" fill="var(--accent)" text-anchor="middle" letter-spacing="1.1">STEP 2</text>
-            <text x="222" y="62" class="mono" font-size="11" font-weight="600" fill="var(--accent)" text-anchor="middle">structural waste</text>
-            <path d="M292 50 H318" stroke="var(--accent)" stroke-width="1.3" fill="none" marker-end="url(#ar10)"/>
+            <rect x="152" y="22" width="140" height="40" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.2"/>
+            <text x="222" y="40" class="mono" font-size="9.5" fill="var(--accent)" text-anchor="middle" letter-spacing="1.1">STEP 2</text>
+            <text x="222" y="54" class="mono" font-size="10.5" font-weight="600" fill="var(--accent)" text-anchor="middle">structural waste</text>
+            <path d="M292 42 H318" stroke="var(--accent)" stroke-width="1.3" fill="none" marker-end="url(#ar10)"/>
 
-            <rect x="326" y="30" width="118" height="40" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.2"/>
-            <text x="385" y="48" class="mono" font-size="10" fill="var(--accent)" text-anchor="middle" letter-spacing="1.1">STEP 3</text>
-            <text x="385" y="62" class="mono" font-size="11" font-weight="600" fill="var(--accent)" text-anchor="middle">merged PRs</text>
-            <path d="M444 50 H470" stroke="var(--accent)" stroke-width="1.3" fill="none" marker-end="url(#ar10)"/>
+            <rect x="326" y="22" width="118" height="40" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="1.2"/>
+            <text x="385" y="40" class="mono" font-size="9.5" fill="var(--accent)" text-anchor="middle" letter-spacing="1.1">STEP 3</text>
+            <text x="385" y="54" class="mono" font-size="10.5" font-weight="600" fill="var(--accent)" text-anchor="middle">merged PRs</text>
+            <path d="M444 42 H470" stroke="var(--accent)" stroke-width="1.3" fill="none" marker-end="url(#ar10)"/>
 
-            <rect x="478" y="30" width="122" height="40" fill="none" stroke="currentColor" stroke-width="1.3" stroke-dasharray="4 3"/>
-            <text x="539" y="48" class="mono" font-size="10" fill="var(--muted)" text-anchor="middle" letter-spacing="1.1">STEP 4</text>
-            <text x="539" y="62" class="mono" font-size="11" fill="var(--ink)" text-anchor="middle">model changes</text>
-            <text x="478" y="86" class="mono" font-size="9.5" fill="var(--muted)">only behind an eval gate</text>
+            <rect x="478" y="22" width="122" height="40" fill="none" stroke="currentColor" stroke-width="1.3" stroke-dasharray="4 3"/>
+            <text x="539" y="40" class="mono" font-size="9.5" fill="var(--muted)" text-anchor="middle" letter-spacing="1.1">STEP 4</text>
+            <text x="539" y="54" class="mono" font-size="10.5" fill="var(--ink)" text-anchor="middle">model changes</text>
 
-            <text x="152" y="92" class="mono" font-size="9.5" fill="var(--muted)">caching · redundant reprocessing</text>
-            <text x="152" y="105" class="mono" font-size="9.5" fill="var(--muted)">fan-outs that skip the cache</text>
+            <text x="0" y="84" class="mono" font-size="9.5" fill="var(--muted)">invoice vs</text>
+            <text x="0" y="97" class="mono" font-size="9.5" fill="var(--muted)">token counts,</text>
+            <text x="0" y="110" class="mono" font-size="9.5" fill="var(--muted)">per workflow</text>
 
-            <text x="0" y="92" class="mono" font-size="9.5" fill="var(--muted)">invoice ↔ tokens</text>
-            <text x="0" y="105" class="mono" font-size="9.5" fill="var(--muted)">per workflow</text>
+            <text x="152" y="84" class="mono" font-size="9.5" fill="var(--muted)">caching, redundant</text>
+            <text x="152" y="97" class="mono" font-size="9.5" fill="var(--muted)">reprocessing, fan-outs</text>
+            <text x="152" y="110" class="mono" font-size="9.5" fill="var(--muted)">that skip the cache</text>
 
-            <text x="326" y="92" class="mono" font-size="9.5" fill="var(--muted)">shipped, not</text>
-            <text x="326" y="105" class="mono" font-size="9.5" fill="var(--muted)">recommended</text>
+            <text x="326" y="84" class="mono" font-size="9.5" fill="var(--muted)">shipped as code,</text>
+            <text x="326" y="97" class="mono" font-size="9.5" fill="var(--muted)">not as advice</text>
+
+            <text x="478" y="84" class="mono" font-size="9.5" fill="var(--muted)">only behind</text>
+            <text x="478" y="97" class="mono" font-size="9.5" fill="var(--muted)">an eval gate</text>
           </svg>
         </div>
-        <figcaption>Steps 1 to 3 are safe: the output does not change. Step 4 is the only one that can cost quality, which is why it comes last and behind evals.</figcaption>
+        <figcaption>Steps 1 to 3 do not change the output. Step 4 can, so it comes last and only once evals exist.</figcaption>
       </figure>
 
       <div class="closing">
         <h3>How I work with teams on this</h3>
-        <p>A fixed-price one-week audit: every AI workflow measured against the invoice, structural waste identified and quantified, and a written recommendation on what to change and what to leave alone. An implementation sprint afterwards is optional — the audit stands on its own, and the fixes ship as reviewed pull requests in your codebase, not as a slide deck.</p>
+        <p>A fixed-price one-week audit: every AI workflow measured against the invoice, structural waste identified and quantified, and a written recommendation on what to change and what to leave alone. An implementation sprint afterwards is optional. The audit stands on its own, and the fixes ship as reviewed pull requests in your codebase, not as a slide deck.</p>
       </div>
 
       <div class="sig">
@@ -911,7 +914,7 @@ figcaption{
       roState=document.getElementById('roState'),roTok=document.getElementById('roTok'),roDelta=document.getElementById('roDelta');
 
   var CAP_A="The prefix is written once and read back seven times. Only the write pays more than list price; every read costs a tenth.";
-  var CAP_B="Eight calls, eight full-price copies of the same 5,000-token prefix — plus a reprocess flag re-running mail that was already classified.";
+  var CAP_B="Eight calls, eight full-price copies of the same 5,000-token prefix, plus a reprocess flag re-running mail that was already classified.";
 
   function setState(after){
     gB.setAttribute('display', after ? 'none' : 'inline');
@@ -979,7 +982,7 @@ figcaption{
     var saved = naive-primed;
 
     if(!worth){
-      oNote.innerHTML = 'Caching costs more here — the write is not amortised. Needs <b>'+breakeven+'</b> or more calls per request to pay for itself.';
+      oNote.innerHTML = 'Caching costs more here. The write never gets paid back. Needs <b>'+breakeven+'</b> or more calls per request to pay for itself.';
     }else if(S===0){
       oNote.innerHTML = 'Nothing is shared between calls, so there is nothing to cache. The win is in the prefix.';
     }else{
